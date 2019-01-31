@@ -13,19 +13,22 @@ import javafx.scene.media.Media;
  * @author Quinten Holmes
  */
 public class SoundFile {
-    private int playtime;
+    private Double playtime;
     private String filePath;
     private String fileName;
     
+    public SoundFile(String filePath, String fileName){
+        this.fileName = fileName;
+        File file = new File(filePath);
+        this.filePath = file.toURI().toString();
+        Media md = new Media(this.filePath);
+        playtime = md.getDuration().toSeconds();
+    }
     
-    public int getPlayTime(){
+    public Double getPlayTime(){
         return playtime;
     }
-
-    public int getPlaytime() {
-        return playtime;
-    }
-
+    
     public String getFileName() {
         return fileName;
     }

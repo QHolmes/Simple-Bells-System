@@ -5,7 +5,6 @@
  */
 package audioSystem;
 
-import dataStructures.BellEvent;
 import dataStructures.SoundFile;
 import java.net.URL;
 import java.util.Timer;
@@ -24,13 +23,13 @@ public class AudioPlayer {
     
     private MediaPlayer mediaPlayer;
     private ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-    private AudioPlayer player;
-    private BellEvent event;
+    private static AudioPlayer player;
+    private ScheduledEvent event;
     private boolean playingTrack = false;
     private final Timer timer;
     private TimerTask lastTask;
     
-    public AudioPlayer getPlayer(){
+    public static AudioPlayer getPlayer(){
         if(player == null)
             player = new AudioPlayer();
         
@@ -42,7 +41,7 @@ public class AudioPlayer {
        timer = new Timer();
     }
     
-    public void setBellEvent(BellEvent b){
+    public void setBellEvent(ScheduledEvent b){
         //End current task if applicable 
         if(lastTask != null && event != null)
             lastTask.cancel();
@@ -53,14 +52,15 @@ public class AudioPlayer {
             return;
         
         scheduleEvent();
+        timer.schedule(lastTask, b.getStartTime());
             
     }
     
-    public BellEvent getBellEvent(){
+    public ScheduledEvent getBellEvent(){
         return event;
     }
     
-    private void play(SoundFile file, int duration, Object ob){
+    private void play(SoundFile file, Double duration, Object ob){
         if(mediaPlayer !=null)
             mediaPlayer.stop();
         try{
@@ -106,7 +106,7 @@ public class AudioPlayer {
                             return;
                         
                         if(event.isPlayPreBell()){
-                            play(event.getPreBell(), -1, this);
+                            play(event.getPreBell(), -1.0, this);
                             event.setRunning(true);
                             wait();
                             event.setRunning(false);
@@ -126,7 +126,7 @@ public class AudioPlayer {
                             return;
                         
                         if(event.isPlayPostBell()){
-                            play(event.getPostBell(), -1, this);
+                            play(event.getPostBell(), -1.0, this);
                             event.setRunning(true);
                             wait();
                             event.setRunning(false);

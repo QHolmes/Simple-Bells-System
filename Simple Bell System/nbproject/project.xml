@@ -14,7 +14,10 @@
         </buildExtensions>
         <data xmlns="http://www.netbeans.org/ns/j2se-project/3">
             <name>Simple Bell System</name>
-            <source-roots/>
+            <source-roots>
+                <root id="src.src.dir" name="Source Packages"/>
+                <root id="src.lib.dir"/>
+            </source-roots>
             <test-roots/>
         </data>
         <libraries xmlns="http://www.netbeans.org/ns/ant-project-libraries/1">
