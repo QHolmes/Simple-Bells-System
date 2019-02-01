@@ -3,10 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package dataStructures.templates;
+package dataStructures;
 
-import dataStructures.ScheduledDay;
-import exceptions.StartDateInPast;
+import dataStructures.templates.EventTemplate;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -16,34 +15,31 @@ import java.util.Date;
  *
  * @author Quinten Holmes
  */
-public class DayTemplate implements Serializable{
+public class ScheduledDay implements Serializable{
     private static final long serialVersionUID = 1;
     
-    private ArrayList<EventTemplate> events = new ArrayList<>();
+    private ArrayList<ScheduledEvent> events = new ArrayList<>();
+    private final Date day;
     private String name;
     
-    public DayTemplate(){
-        
-    }
-    
-    public DayTemplate(String name){
-        this.name = name;
+    public ScheduledDay(Date day){
+        this.day = day;
     }
     
     public void sortEvents(){
         events.sort(new eventComparator());
     }
     
-    public ArrayList<EventTemplate> getEvents(){
-        ArrayList<EventTemplate> ev = new ArrayList();
+    public ArrayList<ScheduledEvent> getEvents(){
+        ArrayList<ScheduledEvent> ev = new ArrayList();
         ev.addAll(events);
         return ev;
     }
     
-    public boolean addEvent(EventTemplate ev){
+    public boolean addEvent(ScheduledEvent ev){
         boolean overlap = false;
         
-        for(EventTemplate e: events){
+        for(ScheduledEvent e: events){
             overlap = e.checkOverlap(ev);
             if(overlap == true)
                 break;
@@ -58,7 +54,7 @@ public class DayTemplate implements Serializable{
         return overlap;
     }
     
-    public void removeEvent(EventTemplate ev){
+    public void removeEvent(ScheduledEvent ev){
         events.remove(ev);
     }
     
@@ -72,6 +68,10 @@ public class DayTemplate implements Serializable{
         }        
     }
 
+    public Date getDay() {
+        return new Date(day.getTime());
+    }
+
     public String getName() {
         return name;
     }
@@ -81,25 +81,22 @@ public class DayTemplate implements Serializable{
     }
     
     /**
-     * Returns a scheduled day for the given date
-     * @param day The day the scheduled event would be used.
+     * Returns the next event that should be played. If there is no more events to 
+     * play it will return a null value.
      * @return 
      */
-    public ScheduledDay createScheduledDay(Date day){
-        ScheduledDay scDay = new ScheduledDay(day);
+    public ScheduledEvent getNextEvent(){
+        ScheduledEvent event = null;
+        Date now = new Date();
         
-        events.forEach( e -> {
-            try {
-                scDay.addEvent( e.createScheduledEvent(day));
-            } catch (StartDateInPast ex) {
-                ex.printStackTrace();
-                //Logger.getLogger(DayTemplate.class.getName()).log(Level.SEVERE, null, ex);
+        for(int i = 0; i < events.size(); i++){
+            if(events.get(i).getStartTime().after(now)){
+                event = events.get(i);
+                break;
             }
-        });
+        }
         
-        scDay.setName(name);
-        
-        return scDay;
+        return event;
     }
     
     

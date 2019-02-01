@@ -3,11 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package audioSystem;
+package dataStructures;
 
-import dataStructures.SoundFile;
+import dataStructures.templates.EventTemplate;
 import exceptions.StartDateInPast;
-import exceptions.TimeOutOfBounds;
+import java.io.Serializable;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Objects;
 
@@ -15,7 +16,9 @@ import java.util.Objects;
  *
  * @author Quinten Holmes
  */
-public class ScheduledEvent {
+public class ScheduledEvent implements Serializable{
+    private static final long serialVersionUID = 1;
+    
     private final Date startTime;
     private final boolean playPreBell;
     private final SoundFile preBell;
@@ -41,7 +44,6 @@ public class ScheduledEvent {
      * @param songDuration The length of time to play the song, if the value is less then zero
      * then the song will play until finished.
      * @param song Only needed if playSong is true.
-     * @throws exceptions.TimeOutOfBounds
      */
     public ScheduledEvent(Date startTime, boolean playPreBell, SoundFile preBell, boolean playPostBell, SoundFile postBell, boolean playSong, Double songDuration, SoundFile song) throws StartDateInPast {
         if(startTime == null)
@@ -96,7 +98,7 @@ public class ScheduledEvent {
     }
 
     public Date getStartTime() {
-        return startTime;
+        return new Date(startTime.getTime());
     }
 
     public Double getSongDuration() {
@@ -164,6 +166,20 @@ public class ScheduledEvent {
     
     public int compareTo(ScheduledEvent o){
         return startTime.compareTo(o.startTime);
+    }
+    
+    public boolean checkOverlap(ScheduledEvent e){
+        Date start = new Date(startTime.getTime());
+        
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(start);
+        calendar.add(Calendar.SECOND, playTime);
+        
+        Date end = calendar.getTime();
+        Date time = e.getStartTime();
+        
+        
+        return time.after(start) && time.before(end);            
     }
     
 }

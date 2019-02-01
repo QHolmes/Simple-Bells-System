@@ -5,6 +5,7 @@
  */
 package audioSystem;
 
+import dataStructures.ScheduledEvent;
 import dataStructures.SoundFile;
 import java.net.URL;
 import java.util.Timer;

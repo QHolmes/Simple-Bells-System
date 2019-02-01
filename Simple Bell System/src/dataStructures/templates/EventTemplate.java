@@ -5,12 +5,13 @@
  */
 package dataStructures.templates;
 
-import audioSystem.ScheduledEvent;
+import dataStructures.ScheduledEvent;
 import dataStructures.SoundFile;
 import exceptions.StartDateInPast;
 import exceptions.TimeOutOfBounds;
 import java.io.Serializable;
 import java.util.Calendar;
+import java.util.Date;
 
 /**
  *
@@ -166,11 +167,13 @@ public class EventTemplate implements Serializable{
     
     /**
      * Creates a ScheduledEvent for today's date at the given time.
+     * @param day Day the event should happen
      * @return 
      * @throws exceptions.StartDateInPast 
      */
-    public ScheduledEvent createScheduledEvent() throws StartDateInPast{
+    public ScheduledEvent createScheduledEvent(Date day) throws StartDateInPast{
         Calendar calendar = Calendar.getInstance();
+        calendar.setTime(day);
         calendar.set(Calendar.HOUR, hour);
         calendar.set(Calendar.MINUTE, minute);
         calendar.set(Calendar.SECOND, second);
