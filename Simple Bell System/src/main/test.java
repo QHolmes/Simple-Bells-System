@@ -5,16 +5,17 @@
  */
 package main;
 
-import audioSystem.AudioPlayer;
-import dataStructures.ScheduledDay;
-import dataStructures.ScheduledEvent;
-import dataStructures.ScheduledWeek;
+import dataStructures.BellRegion;
+import dataStructures.EventSegment;
+import dataStructures.SegmentType;
+import dataStructures.schedules.ScheduledDay;
+import dataStructures.schedules.ScheduledWeek;
 import dataStructures.SoundFile;
+import dataStructures.schedules.ScheduledEvent;
 import dataStructures.templates.DayTemplate;
 import dataStructures.templates.EventTemplate;
 import dataStructures.templates.WeekTemplate;
 import exceptions.StartDateInPast;
-import exceptions.TimeOutOfBounds;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -34,7 +35,36 @@ public class test {
     
     public test(){
         
-        testTemplateBuild();
+        //testTemplateBuild();
+        testBellRegion();
+    }
+    
+    private void testBellRegion(){
+        try {
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.SECOND, 2);
+
+            song = new SoundFile(FILEPATH, "Test Song");
+            EventSegment seg1 = new EventSegment(SegmentType.SOUND, song, 10);
+            EventSegment seg2 = new EventSegment(SegmentType.SILENCE, null, 3);
+            ScheduledEvent event = new ScheduledEvent(calendar.getTime());
+            event.addSegment(seg1, 0);
+            event.addSegment(seg2, 1);
+            event.addSegment(seg1.clone(), 2);
+            
+            ScheduledDay day = new ScheduledDay(calendar.getTime());
+            day.addEvent(event);
+            
+            ScheduledWeek week = new ScheduledWeek(calendar.getTime());
+            week.setDay(day, calendar.get(Calendar.DAY_OF_WEEK) - 1);
+            
+            BellRegion bell = new BellRegion();
+            bell.addScheduledWeek(week);
+            bell.initialize();            
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
     
     private void testTemplateBuild(){
@@ -54,12 +84,16 @@ public class test {
         song = new SoundFile(FILEPATH, "Test Song");
         
         for(int i = 0; i < 10; i++){
-            events.add(new EventTemplate(hour, minute++, second, false, false, true, null, null, song, -1.0));
+            EventSegment seg = new EventSegment(SegmentType.SILENCE, null, 3);
+            EventTemplate eventTemp = new EventTemplate(hour, minute++, second);
+            eventTemp.addSegment(seg, 0);
+            events.add(eventTemp);
         }
         
         for(int i = 0; i < 7; i++){
             DayTemplate day = new DayTemplate("Day-" + i);
-            events.forEach((e) -> day.addEvent(e));
+            for(EventTemplate e: events)
+                day.addEvent(e);
             days.add(day);
         }
         
