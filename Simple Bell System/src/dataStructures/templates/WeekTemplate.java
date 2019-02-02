@@ -5,7 +5,7 @@
  */
 package dataStructures.templates;
 
-import dataStructures.ScheduledWeek;
+import dataStructures.schedules.ScheduledWeek;
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;

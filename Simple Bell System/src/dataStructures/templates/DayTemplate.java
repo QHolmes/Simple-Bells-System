@@ -5,7 +5,7 @@
  */
 package dataStructures.templates;
 
-import dataStructures.ScheduledDay;
+import dataStructures.schedules.ScheduledDay;
 import exceptions.StartDateInPast;
 import java.io.Serializable;
 import java.util.ArrayList;

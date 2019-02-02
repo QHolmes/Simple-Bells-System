@@ -5,11 +5,15 @@
  */
 package audioSystem;
 
-import dataStructures.ScheduledEvent;
+import dataStructures.EventSegment;
+import dataStructures.SegmentType;
+import dataStructures.schedules.ScheduledEvent;
 import dataStructures.SoundFile;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.scene.media.Media;
@@ -61,7 +65,7 @@ public class AudioPlayer {
         return event;
     }
     
-    private void play(SoundFile file, Double duration, Object ob){
+    private void play(SoundFile file, Double duration){
         if(mediaPlayer !=null)
             mediaPlayer.stop();
         try{
@@ -73,12 +77,10 @@ public class AudioPlayer {
             if(duration > 0)
                 mediaPlayer.setStopTime(Duration.seconds(duration));
             
-            final Object signal = ob;
             mediaPlayer.setOnStopped(new Thread(){
                 @Override
                 public void run(){
                     playingTrack = false;
-                    synchronized(signal){signal.notify();}
                 }
             });
             
@@ -95,48 +97,46 @@ public class AudioPlayer {
     public void stop() {
         if(mediaPlayer != null)
             mediaPlayer.stop();
+        playingTrack = false;
     }
     
     private TimerTask scheduleEvent(){
         TimerTask th = new TimerTask(){
             @Override
             public void run() {
+                long stamp = 0;
                 try {
+                    stamp = event.readLockSegments();
                     synchronized(this){
                         if(event.isCancelled())
                             return;
                         
-                        if(event.isPlayPreBell()){
-                            play(event.getPreBell(), -1.0, this);
-                            event.setRunning(true);
-                            wait();
-                            event.setRunning(false);
+                        event.setRunning(true);
+                        ArrayList<EventSegment> segments = event.getSegments();
+                        for(EventSegment s: segments){
+                            s.setRunning(true);
+                            if(s.type != SegmentType.SILENCE){
+                                System.out.printf("Playing %s for %.0f seconds.%n", s.getFile().getFileName(), s.getDuration());
+                                play(s.getFile(), s.getDuration());
+                                Thread.sleep((long) Math.ceil(s.getDuration()) * 1000);
+                                stop();
+                            }else{
+                                System.out.printf("Sleeping for %.0f seconds. %n", s.getDuration());
+                                if(s.getDuration() > 0)
+                                    Thread.sleep((long) Math.ceil(s.getDuration()) * 1000);
+                            }
+                            s.setRunning(false);
                         }
                         
-                        if(event.isCancelled())
-                            return;
-                        
-                        if(event.isPlaySong()){
-                            play(event.getSong(), event.getSongDuration(), this);
-                            event.setRunning(true);
-                            wait();
-                            event.setRunning(false);
-                        }
-                        
-                        if(event.isCancelled())
-                            return;
-                        
-                        if(event.isPlayPostBell()){
-                            play(event.getPostBell(), -1.0, this);
-                            event.setRunning(true);
-                            wait();
-                            event.setRunning(false);
-                        }
+                        event.setRunning(false);
                     }
                 } catch (InterruptedException ex) {
                     //Logger.getLogger(AudioPlayer.class.getName()).log(Level.SEVERE, null, ex);
                     ex.printStackTrace();
                 } finally {
+                    if(stamp != 0)
+                        event.unlockReadLockSegments(stamp);
+                    
                     event = null;
                     lastTask = null;
                 }

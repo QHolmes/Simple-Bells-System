@@ -3,9 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package dataStructures;
+package dataStructures.schedules;
 
 import java.io.Serializable;
+import java.util.Date;
 
 /**
  *
@@ -16,9 +17,10 @@ public class ScheduledWeek implements Serializable{
     
     private ScheduledDay[] days = new ScheduledDay[7];
     private String weekName;
+    private Date date;
 
-    public ScheduledWeek() {
-        
+    public ScheduledWeek(Date date) {
+        this.date = date;
     }
     
     public ScheduledWeek(String weekName){
@@ -52,5 +54,9 @@ public class ScheduledWeek implements Serializable{
         
         throw new java.lang.IndexOutOfBoundsException("Day needs to be between 0-6");
     }    
+     
+    public Date getDate(){
+        return date;
+    }
     
 }

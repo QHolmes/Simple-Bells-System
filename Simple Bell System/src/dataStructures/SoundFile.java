@@ -25,6 +25,10 @@ public class SoundFile {
         playtime = md.getDuration().toSeconds();
     }
     
+    /**
+     * Returns the playtime of the given file in seconds.
+     * @return 
+     */
     public Double getPlayTime(){
         return playtime;
     }

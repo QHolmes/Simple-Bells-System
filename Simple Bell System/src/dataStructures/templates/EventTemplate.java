@@ -5,11 +5,12 @@
  */
 package dataStructures.templates;
 
-import dataStructures.ScheduledEvent;
-import dataStructures.SoundFile;
+import dataStructures.EventSegment;
+import dataStructures.schedules.ScheduledEvent;
 import exceptions.StartDateInPast;
 import exceptions.TimeOutOfBounds;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -23,26 +24,14 @@ public class EventTemplate implements Serializable{
     private int hour;
     private int minute;
     private int second;
-    private boolean playPreBell;
-    private boolean playPostBell;
-    private boolean playSong;
-    private SoundFile preBell;
-    private SoundFile postBell;
-    private SoundFile song;
     private String eventName;
-    private double songDuration;
+    private final ArrayList<EventSegment> segments;
 
-    public EventTemplate(int hour, int minute, int second, boolean playPreBell, boolean playPostBell, boolean playSong, SoundFile preBell, SoundFile postBell, SoundFile song, double songDuration) {
+    public EventTemplate(int hour, int minute, int second) {
         this.hour = hour;
         this.minute = minute;
         this.second = second;
-        this.playPreBell = playPreBell;
-        this.playPostBell = playPostBell;
-        this.playSong = playSong;
-        this.preBell = preBell;
-        this.postBell = postBell;
-        this.song = song;
-        this.songDuration = songDuration;
+        segments = new ArrayList();
     }
 
     public int getHour() {
@@ -78,54 +67,6 @@ public class EventTemplate implements Serializable{
         this.second = second;
     }
 
-    public boolean isPlayPreBell() {
-        return playPreBell;
-    }
-
-    public void setPlayPreBell(boolean playPreBell) {
-        this.playPreBell = playPreBell;
-    }
-
-    public boolean isPlayPostBell() {
-        return playPostBell;
-    }
-
-    public void setPlayPostBell(boolean playPostBell) {
-        this.playPostBell = playPostBell;
-    }
-
-    public boolean isPlaySong() {
-        return playSong;
-    }
-
-    public void setPlaySong(boolean playSong) {
-        this.playSong = playSong;
-    }
-
-    public SoundFile getPreBell() {
-        return preBell;
-    }
-
-    public void setPreBell(SoundFile preBell) {
-        this.preBell = preBell;
-    }
-
-    public SoundFile getPostBell() {
-        return postBell;
-    }
-
-    public void setPostBell(SoundFile postBell) {
-        this.postBell = postBell;
-    }
-
-    public SoundFile getSong() {
-        return song;
-    }
-
-    public void setSong(SoundFile song) {
-        this.song = song;
-    }
-
     public String getEventName() {
         return eventName;
     }
@@ -133,34 +74,46 @@ public class EventTemplate implements Serializable{
     public void setEventName(String eventName) {
         this.eventName = eventName;
     }
-
-    public double getSongDuration() {
-        return songDuration;
-    }
-
-    public void setSongDuration(double songDuration) {
-        if(song == null)
-            throw new NullPointerException("No song set");
-        
-        if(songDuration > 0 && songDuration < song.getPlayTime())
-            this.songDuration = songDuration;
+    
+    /**
+     * Returns a shallow copy of all the segments.
+     * @return list of all segments for this event
+     */
+    public ArrayList<EventSegment> getSegments(){
+        ArrayList<EventSegment> segs = new ArrayList();
+        synchronized(segments){segs.addAll(segments);}
+        return segs;
     }
     
+    /**
+     * Tries to remove the given segment from the event. Will return false is the
+     * segment could not be removed. 
+     * @param seg
+     * @return 
+     */
+    public boolean removeSegment(EventSegment seg){
+        synchronized(segments){return segments.remove(seg);}
+    }
+    
+    /**
+     * Tries to add the given segment to the list at the given spot.
+     * @param seg
+     * @param order
+     */
+    public void addSegment(EventSegment seg, int order){
+        synchronized(segments){segments.add(order, seg);}
+    }
+    
+    /**
+     * Returns the total length of time, in seconds, the event will take to 
+     * complete.
+     * @return length of time in seconds
+     */
     public double getEventDuration(){
         double length = 0;
         
-        if(playPreBell && preBell != null)
-            length += preBell.getPlayTime();
-        
-        if(playPostBell && postBell != null)
-            length += postBell.getPlayTime();
-        
-        if(playSong && song != null){
-            if(songDuration <= 0)
-                length += song.getPlayTime();
-            else
-                length += songDuration;
-        }
+        length = segments.stream().map((s) -> s.getDuration())
+                .reduce(length, (accumulator, _item) -> accumulator + _item);
         
         return length;
     }
@@ -178,24 +131,22 @@ public class EventTemplate implements Serializable{
         calendar.set(Calendar.MINUTE, minute);
         calendar.set(Calendar.SECOND, second);
         
-        return new ScheduledEvent(calendar.getTime(), 
-                playPreBell, 
-                preBell, 
-                playPostBell, 
-                postBell, 
-                playSong, 
-                songDuration, 
-                song);
+        ScheduledEvent event =  new ScheduledEvent(calendar.getTime());
+        
+        for(int i = 0; i < segments.size(); i++)
+            event.addSegment(segments.get(i), i);
+        
+        return event;
     }
     
     public int compareTo(EventTemplate e){
-        return ((hour * 100) + minute) - ((e.getHour() * 100) + e.getMinute());
+        return ((hour * 3600) + (minute * 60) + second) - ((e.getHour() * 3600) + (e.getMinute() * 60) +e.getSecond());
     }
     
     public boolean checkOverlap(EventTemplate e){
-        double start = (hour * 100) + minute;
+        double start = (hour * 3600) + (minute * 60) + second;
         double end = start + getEventDuration();
-        double time = e.getHour() * 100 + e.getMinute();
+        double time = (e.getHour() * 3600) + (e.getMinute() * 60) +e.getSecond();
         
         return time >= start && time <= end;            
     }

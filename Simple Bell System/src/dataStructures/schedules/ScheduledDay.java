@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package dataStructures;
+package dataStructures.schedules;
 
 import dataStructures.templates.EventTemplate;
 import java.io.Serializable;
