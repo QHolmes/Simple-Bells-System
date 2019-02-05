@@ -43,17 +43,17 @@ public class WeekTemplate implements Serializable{
     }
     
     public void setDay(DayTemplate day, int i){
-        if(i >= 0 && i < 7)
-            days[i] = day;
+        if(i >= 1 && i <= 7)
+            days[i - 1] = day;
         else
-            throw new java.lang.IndexOutOfBoundsException("Day needs to be between 0-6");
+            throw new java.lang.IndexOutOfBoundsException("Day needs to be between 1-7");
     }
     
     public DayTemplate getDay(int i){
-        if(i >= 0 && i < 7)
-            return days[i];
+        if(i >= 1 && i <= 7)
+            return days[i - 1];
         
-        throw new java.lang.IndexOutOfBoundsException("Day needs to be between 0-6");
+        throw new java.lang.IndexOutOfBoundsException("Day needs to be between 1-7");
     } 
     
     /**
@@ -67,15 +67,20 @@ public class WeekTemplate implements Serializable{
         cal.setWeekDate(year, weekOfYear, 1);
         Date date = cal.getTime();        
         
-        ScheduledWeek week = new ScheduledWeek(name);
+        ScheduledWeek week = new ScheduledWeek(name, date);
         
         for(int i = 0; i < 7; i++){
             if(days[i] != null)
-                week.setDay(days[i].createScheduledDay(cal.getTime()), i);
+                week.setDay(days[i].createScheduledDay(cal.getTime()));
             cal.add(Calendar.DATE, 1);
         }
         
         return week;
+    }
+    
+    @Override
+    public String toString(){
+        return name;
     }
     
 }

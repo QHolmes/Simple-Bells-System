@@ -6,7 +6,7 @@
 package dataStructures.schedules;
 
 import dataStructures.EventSegment;
-import exceptions.StartDateInPast;
+import dataStructures.templates.EventTemplate;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -32,14 +32,10 @@ public class ScheduledEvent implements Serializable{
      * it will play or skip the pre bell, then it will play or skip the song, lastly it will 
      * play or skip the post bell.No files are required... however that seems silly
      * @param startTime This is when the event should start. Cannot be null or in the past.
-     * @throws exceptions.StartDateInPast
      */
-    public ScheduledEvent(Date startTime ) throws StartDateInPast {
+    public ScheduledEvent(Date startTime ){
         if(startTime == null)
             throw new NullPointerException("Start time was not specified");
-        
-        if(startTime.before(new Date()))
-            throw new StartDateInPast();
                     
         this.startTime = startTime;
         segments = new ArrayList();
@@ -99,6 +95,22 @@ public class ScheduledEvent implements Serializable{
         if(!running){
             long stamp = lock.writeLock();
             segments.add(order, seg);
+            lock.unlockWrite(stamp);
+        }
+        
+        return !running;
+    }
+    
+    /**
+     * Tries to add the given segment to the list at the given spot. If the event
+     * is running, the segment list cannot be modified.
+     * @param seg
+     * @return True if the segment was added, else false
+     */
+    public boolean addSegment(EventSegment seg){
+        if(!running){
+            long stamp = lock.writeLock();
+            segments.add(seg);
             lock.unlockWrite(stamp);
         }
         
@@ -177,6 +189,25 @@ public class ScheduledEvent implements Serializable{
     
     public void unlockReadLockSegments(long stamp){
         lock.unlockRead(stamp);
+    }
+    
+    public boolean setStartTime(Date date){
+        if(running)
+            return false;
+        
+        startTime = date;
+        return true;
+    }
+    
+    public EventTemplate createTemplate(){
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(startTime);
+        EventTemplate ev = new EventTemplate(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), cal.get(Calendar.SECOND));
+        
+        for(int i = 0; i < segments.size(); i++)
+            ev.addSegment(segments.get(i).clone(), i);
+        
+        return ev;
     }
     
 }

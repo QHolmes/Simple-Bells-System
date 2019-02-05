@@ -5,13 +5,16 @@
  */
 package dataStructures;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Quinten Holmes
  */
-public class EventSegment {
+public class EventSegment implements Serializable{
+    private static final long serialVersionUID = 1;
     
-    public final SegmentType type;
+    private SegmentType type;
     private SoundFile file;
     private double duration;
     private boolean running;
@@ -82,5 +85,16 @@ public class EventSegment {
         EventSegment cl = new EventSegment(type, file, duration);
         return cl;
     }
+
+    public SegmentType getType() {
+        return type;
+    }
+
+    public void setType(SegmentType type) {
+        if(!running)
+            this.type = type;
+    }
+    
+    
     
 }

@@ -6,13 +6,17 @@
 package dataStructures;
 
 import java.io.File;
+import java.io.Serializable;
+import java.net.URL;
 import javafx.scene.media.Media;
 
 /**
  *
  * @author Quinten Holmes
  */
-public class SoundFile {
+public class SoundFile implements Serializable{
+    private static final long serialVersionUID = 1;
+    
     private Double playtime;
     private String filePath;
     private String fileName;
@@ -20,6 +24,20 @@ public class SoundFile {
     public SoundFile(String filePath, String fileName){
         this.fileName = fileName;
         File file = new File(filePath);
+        this.filePath = file.toURI().toString();
+        Media md = new Media(this.filePath);
+        playtime = md.getDuration().toSeconds();
+    }
+    
+    public SoundFile(URL url, String fileName){
+        this.fileName = fileName;
+        this.filePath = url.toExternalForm();
+        Media md = new Media(url.toExternalForm());
+        playtime = md.getDuration().toSeconds();
+    }
+    
+    public SoundFile(File file){
+        this.fileName = file.getName();
         this.filePath = file.toURI().toString();
         Media md = new Media(this.filePath);
         playtime = md.getDuration().toSeconds();
@@ -43,5 +61,10 @@ public class SoundFile {
     
     public Media getMedia(){
         return new Media(filePath);
+    }
+    
+    @Override
+    public String toString(){
+        return fileName;
     }
 }

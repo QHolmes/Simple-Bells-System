@@ -7,7 +7,6 @@ package dataStructures.templates;
 
 import dataStructures.EventSegment;
 import dataStructures.schedules.ScheduledEvent;
-import exceptions.StartDateInPast;
 import exceptions.TimeOutOfBounds;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -124,7 +123,7 @@ public class EventTemplate implements Serializable{
      * @return 
      * @throws exceptions.StartDateInPast 
      */
-    public ScheduledEvent createScheduledEvent(Date day) throws StartDateInPast{
+    public ScheduledEvent createScheduledEvent(Date day){
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(day);
         calendar.set(Calendar.HOUR, hour);
@@ -149,6 +148,11 @@ public class EventTemplate implements Serializable{
         double time = (e.getHour() * 3600) + (e.getMinute() * 60) +e.getSecond();
         
         return time >= start && time <= end;            
+    }
+    
+    @Override
+    public String toString(){
+        return eventName;
     }
     
 }

@@ -9,13 +9,9 @@ import dataStructures.EventSegment;
 import dataStructures.SegmentType;
 import dataStructures.schedules.ScheduledEvent;
 import dataStructures.SoundFile;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
@@ -65,7 +61,7 @@ public class AudioPlayer {
         return event;
     }
     
-    private void play(SoundFile file, Double duration){
+    private void play(SoundFile file, double duration){
         if(mediaPlayer !=null)
             mediaPlayer.stop();
         try{
@@ -95,6 +91,7 @@ public class AudioPlayer {
     }
     
     public void stop() {
+        event = null;
         if(mediaPlayer != null)
             mediaPlayer.stop();
         playingTrack = false;
@@ -115,7 +112,7 @@ public class AudioPlayer {
                         ArrayList<EventSegment> segments = event.getSegments();
                         for(EventSegment s: segments){
                             s.setRunning(true);
-                            if(s.type != SegmentType.SILENCE){
+                            if(s.getType() != SegmentType.SILENCE){
                                 System.out.printf("Playing %s for %.0f seconds.%n", s.getFile().getFileName(), s.getDuration());
                                 play(s.getFile(), s.getDuration());
                                 Thread.sleep((long) Math.ceil(s.getDuration()) * 1000);
@@ -133,7 +130,8 @@ public class AudioPlayer {
                 } catch (InterruptedException ex) {
                     //Logger.getLogger(AudioPlayer.class.getName()).log(Level.SEVERE, null, ex);
                     ex.printStackTrace();
-                } finally {
+                } catch (NullPointerException e) {}
+                finally {
                     if(stamp != 0)
                         event.unlockReadLockSegments(stamp);
                     
@@ -145,6 +143,16 @@ public class AudioPlayer {
            
         lastTask = th;
         return lastTask;
+    }
+    
+    /**
+     * Used to play a single SoundFile now. Will interrupt any current event.
+     * @param f SoundFile to be played
+     * @param duration duration of SoundFile to play
+     */
+    public void quickPlay(SoundFile f, double duration){
+        stop();
+        play(f, duration);
     }
     
 }

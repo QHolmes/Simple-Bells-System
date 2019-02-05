@@ -6,7 +6,6 @@
 package dataStructures.templates;
 
 import dataStructures.schedules.ScheduledDay;
-import exceptions.StartDateInPast;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -54,7 +53,6 @@ public class DayTemplate implements Serializable{
             sortEvents();
         }
         
-        
         return overlap;
     }
     
@@ -89,12 +87,7 @@ public class DayTemplate implements Serializable{
         ScheduledDay scDay = new ScheduledDay(day);
         
         events.forEach( e -> {
-            try {
-                scDay.addEvent( e.createScheduledEvent(day));
-            } catch (StartDateInPast ex) {
-                ex.printStackTrace();
-                //Logger.getLogger(DayTemplate.class.getName()).log(Level.SEVERE, null, ex);
-            }
+                scDay.addEvent(e.createScheduledEvent(day));
         });
         
         scDay.setName(name);
@@ -102,5 +95,9 @@ public class DayTemplate implements Serializable{
         return scDay;
     }
     
+    @Override
+    public String toString(){
+        return name;
+    }
     
 }

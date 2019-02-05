@@ -23,4 +23,25 @@ public class Helper {
         return (c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) 
                 && c1.get(Calendar.WEEK_OF_YEAR) == c2.get(Calendar.WEEK_OF_YEAR));
     }
+    
+    public static String dayOfWeekName(int i){
+        switch(i){
+            case(1):
+                return "Sunday";
+            case(2):
+                return "Monday";
+            case(3):
+                return "Tuesday";
+            case(4):
+                return "Wednesday";
+            case(5):
+                return "Thursday";
+            case(6):
+                return "Friday";
+            case(7):
+                return "Saturday";
+            default:
+                return "Not a day";
+        }
+    }
 }

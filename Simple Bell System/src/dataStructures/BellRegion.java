@@ -27,17 +27,19 @@ import java.util.concurrent.locks.StampedLock;
  * @author Quinten Holmes
  */
 public class BellRegion implements Serializable{
-    private static final long serialVersionUID = 1;
+    private static final long serialVersionUID = 2;
     
     private final ArrayList<DayTemplate> dayTemplates;
     private final ArrayList<EventTemplate> eventTemplates;
     private final ArrayList<WeekTemplate> weekTemplates;
     private final ArrayList<ScheduledWeek> schedule;
+    private WeekTemplate defaultWeekTemplate;
     
     private final StampedLock scheduleLock;
+    private final StampedLock arrayLock;
     private transient AudioPlayer player;
     private transient TimerTask schedulerTask;
-    private transient Timer timer;;
+    private transient Timer timer;
     
     public BellRegion(){
         dayTemplates = new ArrayList();
@@ -45,6 +47,8 @@ public class BellRegion implements Serializable{
         weekTemplates = new ArrayList();
         schedule = new ArrayList();
         scheduleLock = new StampedLock();
+        arrayLock = new StampedLock();
+        defaultWeekTemplate = new WeekTemplate();
     } 
     
     public void initialize(){
@@ -56,32 +60,160 @@ public class BellRegion implements Serializable{
     }
     
     public boolean addScheduledWeek(ScheduledWeek newWeek){
+        if(newWeek == null)
+            return false;
         
-        long stamp = scheduleLock.readLock();
+        long stamp = scheduleLock.writeLock();
         
         try{
-            if (!schedule.stream().noneMatch((w) -> (Helper.isSameWeek(newWeek.getDate(), w.getDate())))) {
-                return false;
-            }
-            schedule.add(newWeek);
+            ArrayList<ScheduledWeek> oldWeeks = new ArrayList();
+            schedule.forEach((w) -> {
+                if(Helper.isSameWeek(newWeek.getDate(), w.getDate()))
+                    oldWeeks.add(w);
+                });
+            
+                oldWeeks.forEach(w -> schedule.remove(w));
+            
+                schedule.add(newWeek);
+                
         }finally{
             if(stamp != 0)
-                scheduleLock.unlockRead(stamp);
+                scheduleLock.unlockWrite(stamp);
         }
         
         sortSchedule();
         return true;
     }
     
+    public boolean addTemplateEvent(EventTemplate event){
+        if(event == null)
+            return false;
+        
+        long stamp = arrayLock.writeLock();
+        
+        try{
+            return eventTemplates.add(event);
+                
+        }finally{
+            if(stamp != 0)
+                arrayLock.unlockWrite(stamp);
+        }
+    }
+    
+    public boolean removeTemplateEvent(EventTemplate event){
+        if(event == null)
+            return false;
+        
+        long stamp = arrayLock.writeLock();
+        
+        try{
+            return eventTemplates.remove(event);
+                
+        }finally{
+            if(stamp != 0)
+                arrayLock.unlockWrite(stamp);
+        }
+    }
+    
+    public boolean addTemplateDay(DayTemplate day){
+        if(day == null)
+            return false;
+        
+        long stamp = arrayLock.writeLock();
+        
+        try{
+            return dayTemplates.add(day);
+                
+        }finally{
+            if(stamp != 0)
+                arrayLock.unlockWrite(stamp);
+        }
+    }
+    
+    public boolean removeTemplateDay(DayTemplate day){
+        if(day == null)
+            return false;
+        
+        long stamp = arrayLock.writeLock();
+        
+        try{
+            return dayTemplates.remove(day);
+                
+        }finally{
+            if(stamp != 0)
+                arrayLock.unlockWrite(stamp);
+        }
+    }
+    
+    public boolean addTemplateWeek(WeekTemplate week){
+        if(week == null)
+            return false;
+        
+        long stamp = arrayLock.writeLock();
+        
+        try{
+            return weekTemplates.add(week);
+                
+        }finally{
+            if(stamp != 0)
+                arrayLock.unlockWrite(stamp);
+        }
+    }
+    
+    public boolean removeTemplateWeek(WeekTemplate week){
+        if(week == null)
+            return false;
+        
+        long stamp = arrayLock.writeLock();
+        
+        try{
+            return weekTemplates.remove(week);
+                
+        }finally{
+            if(stamp != 0)
+                arrayLock.unlockWrite(stamp);
+        }
+    }
+    
     public void sortSchedule(){
+        if(schedule.size() < 2)
+            return;
+        
         long stamp = scheduleLock.writeLock();
-        schedule.sort(new scheduleComparator());
+        schedule.sort(new scheduleComparator());        
         scheduleLock.unlockWrite(stamp);
     }
     
     /**
+     * Removes past weeks from the schedule.
+     */
+    public void cleanSchedule(){
+        
+        ArrayList<ScheduledWeek> remove = new ArrayList();
+        Calendar cal = Calendar.getInstance();
+        cal.setWeekDate(cal.get(Calendar.WEEK_OF_YEAR), cal.get(Calendar.YEAR), 1);
+        Date firstOfWeek = cal.getTime();
+        
+        long stamp = scheduleLock.readLock();
+        try{
+            schedule.stream().filter((w) -> (w.getDate().before(firstOfWeek))).forEachOrdered((w) -> {
+                remove.add(w);
+            });
+        }finally{
+            scheduleLock.unlockRead(stamp);
+        }
+        
+        stamp = scheduleLock.writeLock();
+        try{
+           remove.forEach(w -> schedule.remove(w));
+        }finally{
+           scheduleLock.unlockWrite(stamp); 
+        }
+    }
+    
+    /**
      * Returns the scheduledWeek for the current week. If there is no 
-     * scheduled week for this week, this will return null.
+     * scheduled week for this week, this method will create an empty week.
      * @return The scheduled week for the current week
      */
     public ScheduledWeek getCurrentWeek(){
@@ -93,19 +225,73 @@ public class BellRegion implements Serializable{
                 if(Helper.isSameWeek(w.getDate(), today))
                     return w;
                 else if (w.getDate().after(today))
-                    return null;
+                    break;                
             }
         }finally {
             scheduleLock.unlockRead(stamp);
         }
         
-        return null;
+        //Create new week since there is no current week
+        Calendar cal = Calendar.getInstance();
+       
+        ScheduledWeek week = defaultWeekTemplate.createScheduledWeek(cal.get(Calendar.WEEK_OF_YEAR), cal.get(Calendar.YEAR));
+        addScheduledWeek(week);
+        
+        return week;
     }
+    
+    /**
+     * Returns the week of the given year and week number. If no week is scheduled
+     * a null is returned.
+     * @param weekOfYear week number of the year
+     * @param year year the week is in
+     * @return 
+     */
+    public ScheduledWeek getWeek(int weekOfYear, int year){
+        Calendar cal = Calendar.getInstance();
+        cal.setWeekDate(year, weekOfYear, 1);
+        Date weekDate = cal.getTime();
+        
+        long stamp = scheduleLock.readLock();
+        
+        try{
+            for(ScheduledWeek w: schedule){
+                if(Helper.isSameWeek(w.getDate(), weekDate ))
+                    return w;
+                else if (w.getDate().after(weekDate))
+                    break;                
+            }
+        }finally {
+            scheduleLock.unlockRead(stamp);
+        }
+        
+        ScheduledWeek week = defaultWeekTemplate.createScheduledWeek(weekOfYear, year);
+        addScheduledWeek(week);
+        
+        return week;
+        
+    }
+
+    public WeekTemplate getDefaultWeekTemplate() {
+        return defaultWeekTemplate;
+    }
+
+    public void setDefaultWeekTemplate(WeekTemplate defaultWeekTemplate) {
+        this.defaultWeekTemplate = defaultWeekTemplate;
+    }
+
+    public void stopMedia() {
+        player.stop();
+    }
+    
     
     class scheduleComparator implements Comparator {
         @Override
         public int compare(Object o1, Object o2) {
             if(!(o1 instanceof ScheduledWeek))
+                return 0;
+            
+            if(o2 == null)
                 return 0;
             
             return ((ScheduledWeek) o1).getDate().compareTo(((ScheduledWeek) o2).getDate());
@@ -122,7 +308,7 @@ public class BellRegion implements Serializable{
                     return;
                 
                 //Get the current day and ensure its not null
-                ScheduledDay day = w.getDay(Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1);                
+                ScheduledDay day = w.getDay(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));                
                 if( day == null)
                     return;
                 
@@ -134,8 +320,12 @@ public class BellRegion implements Serializable{
                 Calendar sec3 = Calendar.getInstance();
                 sec3.add(Calendar.SECOND, 3);
                 
+                boolean past = event.getStartTime().before(new Date());
+                boolean toSoon = event.getStartTime().after(sec3.getTime());
+                Date dat = sec3.getTime();
+                
                 //If the event is within the next 3 seconds, see if it sould be scheduled
-                if(event.getStartTime().before(new Date()) || event.getStartTime().after(sec3.getTime()))
+                if(past || toSoon)
                     return;
                 
                 //If the event is not the current event, and the current event is done schedule event
@@ -143,11 +333,26 @@ public class BellRegion implements Serializable{
                         || (player.getBellEvent().compareTo(event) != 0 
                         && player.getBellEvent().getStopTime().before(new Date())))
                     player.setBellEvent(event);
-                
             }
         };
         
         return th;
     } 
+
+    public ArrayList<DayTemplate> getDayTemplates() {
+        return dayTemplates;
+    }
+
+    public ArrayList<EventTemplate> getEventTemplates() {
+        return eventTemplates;
+    }
+
+    public ArrayList<WeekTemplate> getWeekTemplates() {
+        return weekTemplates;
+    }
+    
+    public void quickPlay(SoundFile f, double duration){
+        player.quickPlay(f, duration);
+    }
     
 }

@@ -5,6 +5,7 @@
  */
 package dataStructures.schedules;
 
+import dataStructures.templates.DayTemplate;
 import dataStructures.templates.EventTemplate;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -37,21 +38,21 @@ public class ScheduledDay implements Serializable{
     }
     
     public boolean addEvent(ScheduledEvent ev){
-        boolean overlap = false;
+        boolean valid = true;
         
         for(ScheduledEvent e: events){
-            overlap = e.checkOverlap(ev);
-            if(overlap == true)
+            valid = !e.checkOverlap(ev);
+            if(valid == false)
                 break;
         }
         
-        if(!overlap){
+        if(valid){
             events.add(ev);
             sortEvents();
         }
         
         
-        return overlap;
+        return valid;
     }
     
     public void removeEvent(ScheduledEvent ev){
@@ -97,6 +98,14 @@ public class ScheduledDay implements Serializable{
         }
         
         return event;
+    }
+    
+    public DayTemplate createTemplate(){
+        DayTemplate dayTemp = new DayTemplate();
+        
+        events.forEach( e-> dayTemp.addEvent(e.createTemplate()));
+        
+        return dayTemp;
     }
     
     

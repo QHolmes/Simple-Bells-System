@@ -15,7 +15,6 @@ import dataStructures.schedules.ScheduledEvent;
 import dataStructures.templates.DayTemplate;
 import dataStructures.templates.EventTemplate;
 import dataStructures.templates.WeekTemplate;
-import exceptions.StartDateInPast;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -56,7 +55,7 @@ public class test {
             day.addEvent(event);
             
             ScheduledWeek week = new ScheduledWeek(calendar.getTime());
-            week.setDay(day, calendar.get(Calendar.DAY_OF_WEEK) - 1);
+            week.setDay(day);
             
             BellRegion bell = new BellRegion();
             bell.addScheduledWeek(week);

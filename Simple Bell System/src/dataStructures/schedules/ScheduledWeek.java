@@ -5,7 +5,9 @@
  */
 package dataStructures.schedules;
 
+import dataStructures.templates.WeekTemplate;
 import java.io.Serializable;
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -21,9 +23,21 @@ public class ScheduledWeek implements Serializable{
 
     public ScheduledWeek(Date date) {
         this.date = date;
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        int weekOfYear = cal.get(Calendar.WEEK_OF_YEAR);
+        int year = cal.get(Calendar.YEAR);
+        cal.clear();
+        cal.setWeekDate(year, weekOfYear, 1);
+        
+        for(int i = 0; i < 7; i++){
+            days[i] = new ScheduledDay(cal.getTime());
+            cal.add(Calendar.DATE, 1);
+        }
     }
     
-    public ScheduledWeek(String weekName){
+    public ScheduledWeek(String weekName, Date date){
+        this(date);
         this.weekName = weekName;
     }
 
@@ -41,22 +55,31 @@ public class ScheduledWeek implements Serializable{
         return array;
     }
     
-    public void setDay(ScheduledDay day, int i){
-        if(i >= 0 && i < 7)
-            days[i] = day;
-        else
-            throw new java.lang.IndexOutOfBoundsException("Day needs to be between 0-6");
+    public void setDay(ScheduledDay day){
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(day.getDay());
+        int index = cal.get(Calendar.DAY_OF_WEEK) - 1;
+        days[index] = day;
     }
     
     public ScheduledDay getDay(int i){
-        if(i >= 0 && i < 7)
-            return days[i];
+        if(i >= 1 && i <= 7)
+            return days[i - 1];
         
-        throw new java.lang.IndexOutOfBoundsException("Day needs to be between 0-6");
+        throw new java.lang.IndexOutOfBoundsException("Day needs to be between 1-7");
     }    
      
     public Date getDate(){
         return date;
+    }
+    
+    public WeekTemplate getTemplate(){
+        WeekTemplate wTemp = new WeekTemplate();
+        
+        for(int i = 0; i < 7; i++)
+            wTemp.setDay(days[i].createTemplate(), i + 1);
+        
+        return wTemp;
     }
     
 }

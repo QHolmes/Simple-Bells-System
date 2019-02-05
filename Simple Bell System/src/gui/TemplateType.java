@@ -3,14 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package dataStructures;
+package gui;
 
 /**
  *
- * @author Quinten Holmes
+ * @author dholmes
  */
-public enum SegmentType {
-    
-    SOUND, BELL, SILENCE
-    
+public enum TemplateType {
+    WEEK, DAY, EVENT
 }
