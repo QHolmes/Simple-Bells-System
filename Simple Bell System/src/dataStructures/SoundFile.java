@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.Serializable;
 import java.net.URL;
 import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 
 /**
  *
@@ -25,22 +26,23 @@ public class SoundFile implements Serializable{
         this.fileName = fileName;
         File file = new File(filePath);
         this.filePath = file.toURI().toString();
-        Media md = new Media(this.filePath);
-        playtime = md.getDuration().toSeconds();
+        getFileDuration();
     }
     
     public SoundFile(URL url, String fileName){
         this.fileName = fileName;
         this.filePath = url.toExternalForm();
-        Media md = new Media(url.toExternalForm());
-        playtime = md.getDuration().toSeconds();
+        getFileDuration();
     }
     
     public SoundFile(File file){
         this.fileName = file.getName();
         this.filePath = file.toURI().toString();
-        Media md = new Media(this.filePath);
-        playtime = md.getDuration().toSeconds();
+        getFileDuration();
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
     
     /**
@@ -66,5 +68,34 @@ public class SoundFile implements Serializable{
     @Override
     public String toString(){
         return fileName;
+    }
+    
+    private void getFileDuration(){
+        Media file = new Media(filePath); 
+        MediaPlayer mediaPlayer = new MediaPlayer(file);
+        mediaPlayer.setOnReady(() -> {
+            playtime = file.getDuration().toSeconds();
+            mediaPlayer.dispose();
+        });
+    }
+    
+     @Override
+    public int hashCode() {
+        return filePath.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final SoundFile other = (SoundFile) obj;
+        return !this.filePath.equalsIgnoreCase(filePath);
     }
 }

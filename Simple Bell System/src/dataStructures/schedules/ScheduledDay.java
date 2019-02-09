@@ -5,6 +5,8 @@
  */
 package dataStructures.schedules;
 
+import dataStructures.PlayList;
+import dataStructures.SoundFile;
 import dataStructures.templates.DayTemplate;
 import dataStructures.templates.EventTemplate;
 import java.io.Serializable;
@@ -91,7 +93,7 @@ public class ScheduledDay implements Serializable{
         Date now = new Date();
         
         for(int i = 0; i < events.size(); i++){
-            if(events.get(i).getStartTime().after(now)){
+            if(events.get(i).getStopTime().after(now)){
                 event = events.get(i);
                 break;
             }
@@ -108,5 +110,12 @@ public class ScheduledDay implements Serializable{
         return dayTemp;
     }
     
+    public void removeFile(SoundFile file){
+        events.forEach(s -> s.removeFile(file));
+    }
+    
+    public void removePlayList(PlayList list){
+        events.forEach(s -> s.removePlayList(list));
+    }
     
 }

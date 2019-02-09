@@ -5,6 +5,8 @@
  */
 package dataStructures.templates;
 
+import dataStructures.PlayList;
+import dataStructures.SoundFile;
 import dataStructures.schedules.ScheduledWeek;
 import java.io.Serializable;
 import java.util.Calendar;
@@ -81,6 +83,16 @@ public class WeekTemplate implements Serializable{
     @Override
     public String toString(){
         return name;
+    }
+    
+    public void removeFile(SoundFile file){
+        for(int i = 0; i < 0; i++)
+            days[i].removeFile(file);    
+    }
+    
+    public void removePlayList(PlayList list){
+        for(int i = 0; i < 0; i++)
+            days[i].removePlayList(list);
     }
     
 }

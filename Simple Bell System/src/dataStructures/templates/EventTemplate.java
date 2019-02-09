@@ -6,6 +6,8 @@
 package dataStructures.templates;
 
 import dataStructures.EventSegment;
+import dataStructures.PlayList;
+import dataStructures.SoundFile;
 import dataStructures.schedules.ScheduledEvent;
 import exceptions.TimeOutOfBounds;
 import java.io.Serializable;
@@ -129,8 +131,11 @@ public class EventTemplate implements Serializable{
         calendar.set(Calendar.HOUR, hour);
         calendar.set(Calendar.MINUTE, minute);
         calendar.set(Calendar.SECOND, second);
+        calendar.add(Calendar.DATE, -1);
         
-        ScheduledEvent event =  new ScheduledEvent(calendar.getTime());
+        Date dayTime = calendar.getTime();
+        
+        ScheduledEvent event =  new ScheduledEvent(dayTime);
         
         for(int i = 0; i < segments.size(); i++)
             event.addSegment(segments.get(i), i);
@@ -153,6 +158,14 @@ public class EventTemplate implements Serializable{
     @Override
     public String toString(){
         return eventName;
+    }
+    
+    public void removeFile(SoundFile file){
+        segments.forEach(s -> s.removeFile(file));
+    }
+    
+    public void removePlayList(PlayList list){
+        segments.forEach(s -> s.removePlayList(list));
     }
     
 }

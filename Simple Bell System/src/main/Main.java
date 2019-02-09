@@ -6,11 +6,14 @@
 package main;
 
 import gui.BellsSimpleGUIController;
+import java.net.URL;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
+import jfxtras.styles.jmetro8.JMetro;
 
 /**
  *
@@ -27,7 +30,9 @@ public class Main extends Application {
       
         Parent root = (Parent) fxmlLoader.load();
         
-        Scene scene = new Scene(root);        
+        Scene scene = new Scene(root);
+        ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+        
         primaryStage.setScene(scene);
 
         primaryStage.setOnCloseRequest(e -> {
@@ -35,29 +40,11 @@ public class Main extends Application {
             System.exit(1);
         });
         
+        primaryStage.setFullScreenExitHint("Press F11 to toggles full-screen mode");
+        new JMetro(JMetro.Style.LIGHT).applyTheme(scene);
+       
         //show main program
         primaryStage.show();
-        /*
-        Button btn = new Button();
-        btn.setText("Say 'Hello World'");
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            
-            @Override
-            public void handle(ActionEvent event) {
-                System.out.println("Hello World!");
-                new test();
-            }
-        });
-        
-        StackPane root = new StackPane();
-        root.getChildren().add(btn);
-        
-        Scene scene = new Scene(root, 300, 250);
-        
-        primaryStage.setTitle("Hello World!");
-        primaryStage.setScene(scene);
-        primaryStage.show();
-        */
     }
 
     /**

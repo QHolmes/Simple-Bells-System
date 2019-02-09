@@ -6,6 +6,8 @@
 package dataStructures.schedules;
 
 import dataStructures.EventSegment;
+import dataStructures.PlayList;
+import dataStructures.SoundFile;
 import dataStructures.templates.EventTemplate;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -208,6 +210,14 @@ public class ScheduledEvent implements Serializable{
             ev.addSegment(segments.get(i).clone(), i);
         
         return ev;
+    }
+    
+    public void removeFile(SoundFile file){
+        segments.forEach(s -> s.removeFile(file));
+    }
+    
+    public void removePlayList(PlayList list){
+        segments.forEach(s -> s.removePlayList(list));
     }
     
 }

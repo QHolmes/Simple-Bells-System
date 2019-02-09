@@ -192,6 +192,7 @@ public class BellRegion implements Serializable{
         ArrayList<ScheduledWeek> remove = new ArrayList();
         Calendar cal = Calendar.getInstance();
         cal.setWeekDate(cal.get(Calendar.WEEK_OF_YEAR), cal.get(Calendar.YEAR), 1);
+        cal.add(Calendar.WEEK_OF_YEAR, -1);
         Date firstOfWeek = cal.getTime();
         
         long stamp = scheduleLock.readLock();
@@ -281,7 +282,12 @@ public class BellRegion implements Serializable{
     }
 
     public void stopMedia() {
-        player.stop();
+        player.fullStop();
+    }
+
+    public void removePlayList(PlayList list) {
+        weekTemplates.forEach(w -> w.removePlayList(list));
+        schedule.forEach(w -> w.removePlayList(list));
     }
     
     
@@ -320,7 +326,7 @@ public class BellRegion implements Serializable{
                 Calendar sec3 = Calendar.getInstance();
                 sec3.add(Calendar.SECOND, 3);
                 
-                boolean past = event.getStartTime().before(new Date());
+                boolean past = event.getStopTime().before(new Date());
                 boolean toSoon = event.getStartTime().after(sec3.getTime());
                 Date dat = sec3.getTime();
                 
@@ -353,6 +359,11 @@ public class BellRegion implements Serializable{
     
     public void quickPlay(SoundFile f, double duration){
         player.quickPlay(f, duration);
+    }
+    
+    public void removeFile(SoundFile f){
+        weekTemplates.forEach(w -> w.removeFile(f));
+        schedule.forEach(w -> w.removeFile(f));
     }
     
 }

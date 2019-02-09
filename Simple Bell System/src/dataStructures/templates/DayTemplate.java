@@ -5,6 +5,8 @@
  */
 package dataStructures.templates;
 
+import dataStructures.PlayList;
+import dataStructures.SoundFile;
 import dataStructures.schedules.ScheduledDay;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -99,5 +101,14 @@ public class DayTemplate implements Serializable{
     public String toString(){
         return name;
     }
+    
+    public void removeFile(SoundFile file){
+        events.forEach(s -> s.removeFile(file));
+    }
+    
+    public void removePlayList(PlayList list){
+        events.forEach(s -> s.removePlayList(list));
+    }
+    
     
 }

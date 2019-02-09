@@ -10,5 +10,5 @@ package gui;
  * @author dholmes
  */
 public enum TemplateType {
-    WEEK, DAY, EVENT
+    WEEK, DAY, EVENT, BELLS, MUSIC
 }

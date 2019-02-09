@@ -10,6 +10,8 @@ import dataStructures.SegmentType;
 import dataStructures.schedules.ScheduledEvent;
 import dataStructures.SoundFile;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import javafx.scene.media.Media;
@@ -90,8 +92,14 @@ public class AudioPlayer {
         return playingTrack;
     }
     
-    public void stop() {
+    public void fullStop() {
         event = null;
+        if(mediaPlayer != null)
+            mediaPlayer.stop();
+        playingTrack = false;
+    }
+    
+    private void stop(){
         if(mediaPlayer != null)
             mediaPlayer.stop();
         playingTrack = false;
@@ -102,38 +110,72 @@ public class AudioPlayer {
             @Override
             public void run() {
                 long stamp = 0;
+                ScheduledEvent playinegEvent = event;
+                
                 try {
                     stamp = event.readLockSegments();
+                    SoundFile file;
                     synchronized(this){
                         if(event.isCancelled())
                             return;
                         
                         event.setRunning(true);
                         ArrayList<EventSegment> segments = event.getSegments();
-                        for(EventSegment s: segments){
-                            s.setRunning(true);
-                            if(s.getType() != SegmentType.SILENCE){
-                                System.out.printf("Playing %s for %.0f seconds.%n", s.getFile().getFileName(), s.getDuration());
-                                play(s.getFile(), s.getDuration());
-                                Thread.sleep((long) Math.ceil(s.getDuration()) * 1000);
-                                stop();
-                            }else{
-                                System.out.printf("Sleeping for %.0f seconds. %n", s.getDuration());
-                                if(s.getDuration() > 0)
-                                    Thread.sleep((long) Math.ceil(s.getDuration()) * 1000);
-                            }
-                            s.setRunning(false);
+                        
+                        Date start = event.getStartTime();
+                        Date end = event.getStopTime();
+                        Date now  = new Date();
+                        long diff = (now.getTime() - start.getTime()) / 1000;
+                        
+                        double duration = 0;
+                        int index = -1;
+                        
+                        while(duration <= 0.0 && index < segments.size()){
+                            index++;
+                            duration = segments.get(index).getDuration() - diff;
+                            diff -= segments.get(index).getDuration();
                         }
                         
-                        event.setRunning(false);
+                        if(duration <= 0.0 || index >= segments.size()){
+                            return;
+                        }
+                        EventSegment s;
+                        for(int i = index; i < segments.size() && event != null; i++){
+                            s = segments.get(i);
+                            s.setRunning(true);
+                            file = s.getFile();
+                            if(s.getType() == SegmentType.SOUND || s.getType() == SegmentType.BELL && file != null){
+                                System.out.printf("Playing %s for %.0f seconds.%n", file.getFileName(), duration);
+                                play(file, duration);
+                                Thread.sleep((long) Math.ceil(duration) * 1000);
+                                stop();
+                            }else if (s.getType() == SegmentType.PLAYLIST && file != null && s.getPlayList() != null){
+                                System.out.printf("Playing %s for %.0f seconds. From playlist %s.%n", 
+                                        file.getFileName(), duration, s.getPlayList().toString());
+                                play(file, duration);
+                                Thread.sleep((long) Math.ceil(duration) * 1000);
+                                stop();
+                            }else{
+                                if(s.getType() != SegmentType.SILENCE && s.getFile() != null)
+                                    System.out.println("Sound file is null, sleeping instead");
+                                System.out.printf("Sleeping for %.0f seconds. %n", duration);
+                                if(duration > 0)
+                                    Thread.sleep((long) Math.ceil(duration) * 1000);
+                            }
+                            s.setRunning(false);
+                            
+                            if(i + 1 < segments.size())
+                                duration = segments.get(i + 1).getDuration();
+                        }
+                        
+                        playinegEvent.setRunning(false);
                     }
-                } catch (InterruptedException ex) {
-                    //Logger.getLogger(AudioPlayer.class.getName()).log(Level.SEVERE, null, ex);
-                    ex.printStackTrace();
-                } catch (NullPointerException e) {}
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 finally {
-                    if(stamp != 0)
-                        event.unlockReadLockSegments(stamp);
+                    if(stamp != 0 && playinegEvent != null)
+                        playinegEvent.unlockReadLockSegments(stamp);
                     
                     event = null;
                     lastTask = null;
@@ -151,8 +193,12 @@ public class AudioPlayer {
      * @param duration duration of SoundFile to play
      */
     public void quickPlay(SoundFile f, double duration){
-        stop();
+        fullStop();
         play(f, duration);
+    }
+    
+    public double getFileDuration(String filePath){
+        return 0.0;
     }
     
 }
