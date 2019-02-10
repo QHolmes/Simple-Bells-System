@@ -86,6 +86,7 @@ public class BellsSimpleGUIController implements Initializable {
     
     @FXML private MenuItem loadWeek;
     @FXML private MenuItem saveWeek;
+    @FXML private MenuItem saveEventM;
     @FXML private MenuItem nextWeek;
     @FXML private MenuItem prevWeek;
     @FXML private MenuItem saveDay;
@@ -137,6 +138,7 @@ public class BellsSimpleGUIController implements Initializable {
     @FXML private HBox deletePane;
     
     private final String timePattern = "hh:mm:ss a";
+    private final String timeDatePattern = "hh:mm:ss a";
     private final String timeLabelPattern = "hh:mm:ss a";
     private final String dayPattern = "EEEE, MMM dd yyyy";
     private final String namingPattern = "yyyy.MM.dd.HH.mm.ss";
@@ -144,6 +146,7 @@ public class BellsSimpleGUIController implements Initializable {
     private final SimpleDateFormat dayFormat;
     private final SimpleDateFormat timeLabelFormat;
     private final SimpleDateFormat nameingFormat;
+    private final SimpleDateFormat timeDateFormat;
     private ScheduledEvent editingEvent;
     private SoundFile selectedSound;
     private TemplateType templateType;
@@ -161,6 +164,7 @@ public class BellsSimpleGUIController implements Initializable {
         dayFormat = new SimpleDateFormat(dayPattern);
         timeLabelFormat = new SimpleDateFormat(timeLabelPattern);
         nameingFormat = new SimpleDateFormat(namingPattern);
+        timeDateFormat = new SimpleDateFormat(timeDatePattern);
         this.stage = stage;
         deleteChoice = false;
         deleteNotice = new Object();
@@ -193,6 +197,7 @@ public class BellsSimpleGUIController implements Initializable {
         messageButton.setOnAction((ActionEvent e) -> {
             Platform.runLater(() -> { 
                 messagePane.setVisible(false);
+                core.getLog().log(Level.INFO,"Hiding message window");
             });  
         });
         
@@ -200,34 +205,16 @@ public class BellsSimpleGUIController implements Initializable {
      //---Player Control-----
      //----------------------  
         stopBells.setOnAction((ActionEvent e) -> {
+            core.getLog().log(Level.INFO,"Stopping media player.");
             stopMedia();
+            core.getLog().log(Level.INFO,"Media player stopped.");
         });
      
      //----------------------
      //--Delete Comfirmation-
      //---------------------- 
         
-        deleteYes.setOnAction((ActionEvent e) -> {
-            Platform.runLater(() -> { 
-                deletePane.setVisible(false);
-            });  
-            
-            deleteChoice = true;
-            synchronized(deleteNotice){
-                deleteNotice.notifyAll();
-            }
-        });
-        
-        deleteNo.setOnAction((ActionEvent e) -> {
-            Platform.runLater(() -> { 
-                deletePane.setVisible(false);
-            });  
-            
-            deleteChoice = false;
-            synchronized(deleteNotice){
-                deleteNotice.notifyAll();
-            }
-        });
+        setupDeleteComf();
         
      //----------------------
      //-------Add Files------
@@ -276,37 +263,7 @@ public class BellsSimpleGUIController implements Initializable {
      //----------------------
      //------Table Setup-----
      //----------------------
-        eventTable.setPlaceholder(new Label("No events scheduled"));
-        eventTable.setRowFactory(tv -> {
-            TableRow<ScheduledEvent> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if ((! row.isEmpty()) ) { //event.getClickCount() == 2 && 
-                    ScheduledEvent rowData = row.getItem();
-                    displayEvent(rowData, false);
-                }
-            });
-            return row ;
-        });
-                
-        startColumn.setCellValueFactory(data -> {
-            try{
-                Date date = data.getValue().getStartTime();
-                return new SimpleStringProperty(timeFormat.format(date));
-            }catch (NullPointerException ex){
-                return new SimpleStringProperty("");
-            }
-        });
-        
-        endColumn.setCellValueFactory(data -> {
-            try{
-                Date date = data.getValue().getStopTime();
-                return new SimpleStringProperty(timeFormat.format(date));
-            }catch (NullPointerException ex){
-                return new SimpleStringProperty("");
-            }
-        });
-        
-        setDay();
+        setupTable();
      //----------------------
      //---Play List Setup----
      //---------------------- 
@@ -328,10 +285,12 @@ public class BellsSimpleGUIController implements Initializable {
      //-----Quick Bells------
      //---------------------- 
         ringBell.setOnAction((ActionEvent event) -> {
+            core.getLog().log(Level.INFO,"Quick ring activated");
             ringBell();
         });
         
         setupShortCuts();
+        setDay();
     }    
     
     private void setDay(){      
@@ -351,31 +310,37 @@ public class BellsSimpleGUIController implements Initializable {
     }
     
     private void addEvent(){
-        Calendar cal = Calendar.getInstance();
-            cal.setTime(editingEvent.getStartTime());
-            int hour = (int) hourEvent.getValue();
-            int min = (int) minEvent.getValue();
-            int second = (int) secEvent.getValue();
-            
-            cal.set(Calendar.HOUR_OF_DAY, (int) hourEvent.getValue());
-            cal.set(Calendar.MINUTE, (int) minEvent.getValue());
-            cal.set(Calendar.SECOND, (int) secEvent.getValue());
-        
-        Date day = cal.getTime();
-            
-        editingEvent.setStartTime(cal.getTime());
-        Object o = core.getCurrentDay();
-        boolean b =  core.getCurrentDay().addEvent(editingEvent);
-        
-        if(b == true){
-        Platform.runLater(() -> { 
-            eventTable.getItems().add(editingEvent);
-        });
-        
-        displayEvent(editingEvent, false);
-        core.save();
-        }else{
-            message("The event could not be added, please check for time conflicts.");
+        try{
+            Calendar cal = Calendar.getInstance();
+                cal.setTime(editingEvent.getStartTime());
+                int hour = (int) hourEvent.getValue();
+                int min = (int) minEvent.getValue();
+                int second = (int) secEvent.getValue();
+
+                cal.set(Calendar.HOUR_OF_DAY, (int) hourEvent.getValue());
+                cal.set(Calendar.MINUTE, (int) minEvent.getValue());
+                cal.set(Calendar.SECOND, (int) secEvent.getValue());
+
+            editingEvent.setStartTime(cal.getTime());
+            Object o = core.getCurrentDay();
+            boolean b =  core.getCurrentDay().addEvent(editingEvent);
+
+            if(b == true){
+                Platform.runLater(() -> { 
+                    eventTable.getItems().add(editingEvent);
+                });
+
+                displayEvent(editingEvent, false);
+                core.save();
+                core.getLog().log(Level.INFO,"Adding new event for {0}", timeDateFormat.format(cal.getTime()));
+            }else{
+                core.getLog().log(Level.WARNING,"New event could not be added at {0}", timeDateFormat.format(cal));
+                message("The event could not be added, please check for time conflicts.");
+            }
+        }catch(Exception e){
+            message("Error adding event: " + e.getMessage());
+            core.getLog().log(Level.WARNING, "Error adding event: {0}", e.getMessage());
+            e.printStackTrace();
         }
     } 
     
@@ -383,6 +348,7 @@ public class BellsSimpleGUIController implements Initializable {
         editingEvent = event;
         
         if(event == null){
+            core.getLog().log(Level.INFO,"Clearing displayed event");
             Platform.runLater(() -> { 
                 eventInfo.setContent(null);
                 hourEvent.setDisable(true);
@@ -394,6 +360,11 @@ public class BellsSimpleGUIController implements Initializable {
             }); 
             return;
         }
+        
+        if(newEvent)
+            core.getLog().log(Level.INFO,"Displaying new event...");
+        else
+            core.getLog().log(Level.INFO,"Displaying event {0}...", timeDateFormat.format(event.getStartTime()));
         
         GridPane grid = new GridPane();
             grid.setVgap(10);
@@ -429,6 +400,7 @@ public class BellsSimpleGUIController implements Initializable {
             TextField duration = new TextField();
             duration.setPrefColumnCount(10);
             duration.setText(String.format("%d",(int) Math.ceil(seg.getDuration())));
+            
             duration.textProperty().addListener(
             (ObservableValue<? extends String> observable, String oldValue, String newValue) -> {
                String s = newValue;
@@ -437,75 +409,88 @@ public class BellsSimpleGUIController implements Initializable {
                else
                    s = oldValue;
                
-                duration.setText(s);   
-                try{seg.setDuration(Integer.parseInt(s));}catch(Exception e){}
+                  
+                try{
+                    int num = Integer.parseInt(s);
+                    seg.setDuration(num);
+                    if(num == 0){
+                        s = String.format("%d", (int) Math.ceil(seg.getDuration()));
+                    }
+                } catch(Exception e){
+                    core.getLog().log(Level.WARNING, "Failed to change duration: {0}", e.getMessage());
+                }
+                
+                duration.setText(s); 
                 updateEventTable();
             });
             
             selection.setOnAction((Event event1) -> {
-                String st = selection.getValue().toString();
-                files.getItems().clear();
-                
-                switch(st.toLowerCase()){
-                    case ("music"):
-                        Platform.runLater(() -> { 
-                            files.getItems().addAll(core.musicFiles);
-                            temp.updateOrginial(core.musicFiles);
-                            files.setDisable(false);
-                            seg.setType(SegmentType.SOUND);
-                            if(seg.getFile() == null)
-                                seg.setFile(core.musicFiles.iterator().next());
-                            files.setValue(seg.getFile());
-                        });
-                        break;
-                    case ("bell"):
-                        Platform.runLater(() -> { 
-                            files.getItems().addAll(core.bellSounds);
-                            temp.updateOrginial(core.bellSounds);
-                            files.setDisable(false);
-                            seg.setType(SegmentType.SOUND);
-                            if(seg.getFile() == null)
-                                seg.setFile(core.defaultBell);
-                            files.setValue(seg.getFile());
-                        });
-                        break;
-                    case ("play list"):
-                        Platform.runLater(() -> { 
-                            files.getItems().addAll(core.playLists);
-                            temp.updateOrginial(core.playLists);
-                            files.setDisable(false);
-                            seg.setType(SegmentType.PLAYLIST);
-                            if(seg.getPlayList() == null){
-                                if(core.playLists.isEmpty())
-                                    files.setValue(null);
-                                else{
-                                    seg.setPlayList(core.playLists.iterator().next());
+                try{
+                    String st = selection.getValue().toString();
+                    files.getItems().clear();
+
+                    switch(st.toLowerCase()){
+                        case ("music"):
+                            Platform.runLater(() -> { 
+                                files.getItems().addAll(core.getMusicFiles());
+                                temp.updateOrginial(core.getMusicFiles());
+                                files.setDisable(false);
+                                seg.setType(SegmentType.SOUND);
+                                if(seg.getFile() == null)
+                                    seg.setFile(core.getMusicFiles().iterator().next());
+                                files.setValue(seg.getFile());
+                            });
+                            break;
+                        case ("bell"):
+                            Platform.runLater(() -> { 
+                                files.getItems().addAll(core.getBellSounds());
+                                temp.updateOrginial(core.getBellSounds());
+                                files.setDisable(false);
+                                seg.setType(SegmentType.SOUND);
+                                if(seg.getFile() == null)
+                                    seg.setFile(core.defaultBell);
+                                files.setValue(seg.getFile());
+                            });
+                            break;
+                        case ("play list"):
+                            Platform.runLater(() -> { 
+                                files.getItems().addAll(core.playLists);
+                                temp.updateOrginial(core.playLists);
+                                files.setDisable(false);
+                                seg.setType(SegmentType.PLAYLIST);
+                                if(seg.getPlayList() == null){
+                                    if(core.playLists.isEmpty())
+                                        files.setValue(null);
+                                    else{
+                                        seg.setPlayList(core.playLists.iterator().next());
+                                        files.setValue(seg.getPlayList());
+                                    }
+                                }else{
                                     files.setValue(seg.getPlayList());
                                 }
-                            }else{
-                                files.setValue(seg.getPlayList());
-                            }
-                        });
-                        break;
-                    case ("silence"):
-                        Platform.runLater(() -> { 
-                            files.getItems().clear();
-                            files.setDisable(true);
-                            seg.setType(SegmentType.SILENCE);
-                        });
-                        break;
-                    default:
-                        
+                            });
+                            break;
+                        case ("silence"):
+                            Platform.runLater(() -> { 
+                                files.getItems().clear();
+                                files.setDisable(true);
+                                seg.setType(SegmentType.SILENCE);
+                            });
+                            break;
+                        default:
+                    }
+                    updateEventTable();       
+                }catch(Exception e){
+                    core.getLog().log(Level.INFO, "Error changing event type: {0}", e.getMessage());
                 }
-                updateEventTable();                
             });
             
             String segType;
             switch(seg.getType()){
                 case SOUND:
                     segType = "Music";
-                    files.getItems().addAll(core.musicFiles);
-                    temp.updateOrginial(core.musicFiles);
+                    files.getItems().addAll(core.getMusicFiles());
+                    temp.updateOrginial(core.getMusicFiles());
                     files.setDisable(false);
                     files.setValue(seg.getFile());
                     break;
@@ -517,8 +502,8 @@ public class BellsSimpleGUIController implements Initializable {
                     files.setValue(seg.getPlayList());
                     break;
                 case BELL:
-                    files.getItems().addAll(core.bellSounds);
-                    temp.updateOrginial(core.bellSounds);
+                    files.getItems().addAll(core.getBellSounds());
+                    temp.updateOrginial(core.getBellSounds());
                     files.setDisable(false);
                     files.setValue(seg.getFile());
                     segType = "Bell";
@@ -533,9 +518,13 @@ public class BellsSimpleGUIController implements Initializable {
            Button rmSection = new Button("-");
            
            rmSection.setOnAction((ActionEvent event1)-> {
-               event.removeSegment(seg);
-               displayEvent(event, newEvent);
-               updateEventTable();               
+               try{
+                event.removeSegment(seg);
+                displayEvent(event, newEvent);
+                updateEventTable(); 
+               }catch(Exception e){
+                   core.getLog().log(Level.WARNING, "Failed to remove section: {0}", e.getMessage());
+               }
             });
            
            
@@ -545,10 +534,14 @@ public class BellsSimpleGUIController implements Initializable {
         
        Button addSection = new Button("+");
        addSection.setOnAction((ActionEvent event1)-> {
-           EventSegment newSeg = new EventSegment(SegmentType.BELL, core.defaultBell, 3);
-           event.addSegment(newSeg);
-           displayEvent(event, newEvent);
-           updateEventTable();
+           try{
+                EventSegment newSeg = new EventSegment(SegmentType.BELL, core.defaultBell, 3);
+                event.addSegment(newSeg);
+                displayEvent(event, newEvent);
+                updateEventTable();
+           }catch(Exception e){
+               core.getLog().log(Level.WARNING, "Failed to add a new section: {0}", e.getMessage());
+           }
         });
        
        grid.add(addSection, 3, rowCount + 1);
@@ -595,33 +588,24 @@ public class BellsSimpleGUIController implements Initializable {
         );        
         return box;
     }
-    
-    private int getRowCount(GridPane pane) {
-        int numRows = pane.getRowConstraints().size();
-        for (int i = 0; i < pane.getChildren().size(); i++) {
-            Node child = pane.getChildren().get(i);
-            if (child.isManaged()) {
-                Integer rowIndex = GridPane.getRowIndex(child);
-                if(rowIndex != null){
-                    numRows = Math.max(numRows,rowIndex+1);
-                }
-            }
-        }
-        return numRows;
-    }
 
     public void shutDown() {
+        core.getLog().log(Level.INFO, "Safely shutting down...");
         core.save();
     }
 
     private void removeEvent() {
-        editingEvent.cancelEvent();
-        core.getCurrentDay().removeEvent(editingEvent);
-        setDay();
-        
-        editingEvent = null;
-        
-        displayEvent(null, false);
+        try{
+            editingEvent.cancelEvent();
+            core.getCurrentDay().removeEvent(editingEvent);
+            setDay();
+
+            editingEvent = null;
+
+            displayEvent(null, false);
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error removing event: {0}", e.getMessage());
+        }
     }
     
     private void message(String m){
@@ -629,36 +613,42 @@ public class BellsSimpleGUIController implements Initializable {
             messageLabel.setText(m);
             messagePane.setVisible(true);
         });  
-        System.out.println("Message: " + m);
+        core.getLog().log(Level.INFO,"Message being displayed: \"{0}\"", m);
     }
     
     private void openTemplate(TemplateType type){
         templateType = type;
         Platform.runLater(() -> { 
-            templateDefault.setVisible(type == TemplateType.WEEK);
-            templateCombo.getItems().clear();
-            switch(templateType){
-            case WEEK:
-                templateCombo.getItems().addAll(core.region.getWeekTemplates());
-                templateLabel.setText("Week Templates");
-                break; 
-            case DAY:
-                templateCombo.getItems().addAll(core.region.getDayTemplates());
-                templateLabel.setText("Day Templates");
-                break;
-            case EVENT:
-                templateCombo.getItems().addAll(core.region.getEventTemplates());
-                templateLabel.setText("Event Templates");
-                break;
+            try{
+                templateDefault.setVisible(type == TemplateType.WEEK);
+                templateCombo.getItems().clear();
+                switch(templateType){
+                case WEEK:
+                    templateCombo.getItems().addAll(core.region.getWeekTemplates());
+                    templateLabel.setText("Week Templates");
+                    break; 
+                case DAY:
+                    templateCombo.getItems().addAll(core.region.getDayTemplates());
+                    templateLabel.setText("Day Templates");
+                    break;
+                case EVENT:
+                    templateCombo.getItems().addAll(core.region.getEventTemplates());
+                    templateLabel.setText("Event Templates");
+                    break;
+                }
+
+                templatePane.setVisible(true);
+            } catch(Exception e){
+                core.getLog().log(Level.WARNING, "Failed to open template Window: {0}", e.getMessage());
             }
-            
-            templatePane.setVisible(true);
+            core.getLog().log(Level.INFO, "Template window opening [{0}]", type.toString());
         });
     }
     
     private void closeTemplate(){
         Platform.runLater(() -> { 
             templatePane.setVisible(false);
+            core.getLog().log(Level.INFO, "template Window closed");
         });
         core.save();
     }
@@ -669,27 +659,30 @@ public class BellsSimpleGUIController implements Initializable {
             return;
         
         try{
-        switch(templateType){
-            case WEEK:
-                WeekTemplate tempWeek = (WeekTemplate) ob;
-                core.region.addScheduledWeek(tempWeek.createScheduledWeek(core.currentWeek, core.currentYear));
-                setDay();
-                break; 
-            case DAY:
-                DayTemplate tempDay = (DayTemplate) ob;
-                core.getSelectedWeek().setDay(tempDay.createScheduledDay(core.getCurrentDay().getDay()));
-                setDay();
-                break;
-            case EVENT:
-                EventTemplate tempEvent = (EventTemplate) ob;
-                displayEvent(tempEvent.createScheduledEvent(new Date()), true);
-                break;
-        }
-        }catch(ClassCastException e){
-            e.printStackTrace();
+            switch(templateType){
+                case WEEK:
+                    WeekTemplate tempWeek = (WeekTemplate) ob;
+                    core.region.addScheduledWeek(tempWeek.createScheduledWeek(core.currentWeek, core.currentYear));
+                    setDay();
+                    break; 
+                case DAY:
+                    DayTemplate tempDay = (DayTemplate) ob;
+                    core.getSelectedWeek().setDay(tempDay.createScheduledDay(core.getCurrentDay().getDay()));
+                    setDay();
+                    break;
+                case EVENT:
+                    EventTemplate tempEvent = (EventTemplate) ob;
+                    displayEvent(tempEvent.createScheduledEvent(new Date()), true);
+                    break;
+            }
+
+            closeTemplate();
+            core.getLog().log(Level.INFO, "Template selected: {1} [{0}]", new Object[] {ob.toString(), templateType.toString()});
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Failed to select Template: {0}", e.getMessage());
+            message("Failed to open template: " + e.getMessage());
         }
         
-        closeTemplate();
     }
 
     private void deleteTemplate() {
@@ -704,22 +697,24 @@ public class BellsSimpleGUIController implements Initializable {
                     return;
 
                 try{
-                switch(templateType){
-                    case WEEK:
-                        core.region.removeTemplateWeek((WeekTemplate) ob);
-                        break; 
-                    case DAY:
-                        core.region.removeTemplateDay((DayTemplate) ob);
-                        break;
-                    case EVENT:
-                        core.region.removeTemplateEvent((EventTemplate) ob);
-                        break;
+                    switch(templateType){
+                        case WEEK:
+                            core.region.removeTemplateWeek((WeekTemplate) ob);
+                            break; 
+                        case DAY:
+                            core.region.removeTemplateDay((DayTemplate) ob);
+                            break;
+                        case EVENT:
+                            core.region.removeTemplateEvent((EventTemplate) ob);
+                            break;
                 }
-                }catch(ClassCastException e){
-                    e.printStackTrace();
+                }catch(Exception e){
+                    core.getLog().log(Level.WARNING, "Failed to delete Template: {0}", e.getMessage());
+                    message("Failed to delete template: " + e.getMessage());
                 }
 
                 openTemplate(templateType);
+                core.getLog().log(Level.INFO, "Deleted template: {1} [{0}]", new Object[] {ob.toString(), templateType.toString()});
             }
         }; 
         
@@ -732,113 +727,182 @@ public class BellsSimpleGUIController implements Initializable {
             return;
         
         WeekTemplate w = (WeekTemplate) templateCombo.getValue();
-        if(w != null)
+        if(w != null){
             core.setDefaultWeek(w);
-        
-        closeTemplate();
+            message("Default template now set to: " + w.toString());
+            core.getLog().log(Level.INFO, "Default template now set to: {0}", w.toString());
+        }
     }
     
     private void openSave(TemplateType type){
         templateType = type;
+        core.getLog().log(Level.INFO, "Opening save window [{0}]", type.toString());
+        
         Platform.runLater(() -> { 
-            saveField.setText("");
-            switch(templateType){
-                case WEEK:
-                    saveField.setText("Week " + nameingFormat.format(new Date()));
-                    templateLabel.setText("Save Week");
-                    break; 
-                case DAY:
-                    saveField.setText("Day " + nameingFormat.format(new Date()));
-                    templateLabel.setText("Save Day");
-                    break;
-                case EVENT:
-                    if(editingEvent == null)
-                        return;
-                    
-                    saveField.setText("Event " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
-                    templateLabel.setText("Save Event");
-                    break;
-                }
-            
-            savePane.setVisible(true);
+            try{
+                saveField.setText("");
+                switch(templateType){
+                    case WEEK:
+                        saveField.setText("Week " + nameingFormat.format(new Date()));
+                        templateLabel.setText("Save Week");
+                        break; 
+                    case DAY:
+                        saveField.setText("Day " + nameingFormat.format(new Date()));
+                        templateLabel.setText("Save Day");
+                        break;
+                    case EVENT:
+                        if(editingEvent == null)
+                            return;
+
+                        saveField.setText("Event " + new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()));
+                        templateLabel.setText("Save Event");
+                        break;
+                    }
+
+                savePane.setVisible(true);
+            }catch (Exception e){
+                core.getLog().log(Level.INFO, "Failed to open save window: {0}", e.getMessage());
+            }
         });
     }
     
     private void acceptSave(){
-        switch(templateType){
-            case WEEK:
-                WeekTemplate w = core.getSelectedWeek().getTemplate();
-                w.setWeekName(saveField.getText());
-                core.region.addTemplateWeek(w);
-                break; 
-            case DAY:
-                DayTemplate d = core.getCurrentDay().createTemplate();
-                d.setName(saveField.getText());
-                core.region.addTemplateDay(d);
-                break;
-            case EVENT:
-                if(editingEvent != null){                
-                    EventTemplate e = editingEvent.createTemplate();
-                    e.setEventName(saveField.getText());
-                    core.region.addTemplateEvent(e);
-                }
-                break;
+        try{
+            Object ob;
+            switch(templateType){
+                case WEEK:
+                    WeekTemplate w = core.getSelectedWeek().getTemplate();
+                    ob = w;
+                    w.setWeekName(saveField.getText());
+                    core.region.addTemplateWeek(w);
+                    break; 
+                case DAY:
+                    DayTemplate d = core.getCurrentDay().createTemplate();
+                    ob = d;
+                    d.setName(saveField.getText());
+                    core.region.addTemplateDay(d);
+                    break;
+                case EVENT:
+                    if(editingEvent != null){                
+                        EventTemplate e = editingEvent.createTemplate();
+                        ob = e;
+                        e.setEventName(saveField.getText());
+                        core.region.addTemplateEvent(e);
+                    }else{
+                        message("There is no event to save");
+                        closeSave();
+                        return;
+                    }
+                    break;
+                default:
+                    message("An unknown error as occured: Type unknown");
+                    core.getLog().log(Level.WARNING, "Type unkown trying to save, quitting");
+                    closeSave();
+                    return;
+                    
+            }
+            
+            closeSave();
+            core.getLog().log(Level.INFO, "Accepted saved template {1} [{0}]", new Object[] {ob.toString(), templateType.toString()});
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Failed to accept save: {0}", e.getMessage());
         }
         
-       closeSave();
     }
     
     private void closeSave(){
         Platform.runLater(() -> { 
             savePane.setVisible(false);
         });
+        core.getLog().log(Level.INFO, "Closing save");
         core.save();
     }
     
     private void addMusic(){
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Add Music Files");
-        fileChooser.getExtensionFilters().addAll(
-            new FileChooser.ExtensionFilter("Audio Files", "*.mp3", "*.wav", "*.m4a", "*.aif", "*.aiff", "*.AAC", "*.pcm")
-        );
-        List<File> list = fileChooser.showOpenMultipleDialog(stage);
-        
-        SoundFile s;
-        if(list != null){
-            for(File f: list){
-                s = new SoundFile(f);
-                core.musicFiles.add(s);
+        try{
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Add Music Files");
+            fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Audio Files", "*.mp3", "*.wav", "*.m4a", "*.aif", "*.aiff", "*.AAC", "*.pcm")
+            );
+
+            core.getLog().log(Level.INFO, "Showing add music file chooser");
+            List<File> list = fileChooser.showOpenMultipleDialog(stage);
+            core.getLog().log(Level.INFO, "Add music file chooser returned");
+
+            SoundFile s;
+            int i = 0;
+            boolean b;
+            if(list != null){
+                for(File f: list){
+                    s = new SoundFile(f);
+                    b = core.addMusicFile(s);
+                    if(b)
+                        i++;
+                    
+                }
+                
+                if(i > 0)
+                    message( i + "/" + list.size() + " new files added. Any duplicates were skipped");
+                else
+                   message("All selected files were already added"); 
+                
+                setDay();
+                core.save();
             }
-            setDay();
-            core.save();
-        }
-        
+            
+            core.getLog().log(Level.INFO, "Add music file complete");
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Add music failed: {0}", e.getMessage());
+            message("An error occured trying to add new music files: " + e.getMessage());
+        }        
     }
     
     private void addBells(){
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Add Bell Sound Files");
-        fileChooser.getExtensionFilters().addAll(
-            new FileChooser.ExtensionFilter("Audio Files", "*.mp3", "*.wav", "*.m4a", "*.aif", "*.aiff", "*.AAC", "*.pcm")
-        );
-        List<File> list = fileChooser.showOpenMultipleDialog(stage);
-        
-        SoundFile s;
-        if(list != null){
-            for(File f: list){
-                s = new SoundFile(f);
-                core.bellSounds.add(s);
+        try{
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Add Bell Sound Files");
+            fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Audio Files", "*.mp3", "*.wav", "*.m4a", "*.aif", "*.aiff", "*.AAC", "*.pcm")
+            );
+
+            core.getLog().log(Level.INFO, "Showing add bell sounds chooser");
+            List<File> list = fileChooser.showOpenMultipleDialog(stage);
+            core.getLog().log(Level.INFO, "Add bell sounds chooser returned");
+
+            SoundFile s;
+            int i = 0;
+            boolean b;
+            if(list != null){
+                for(File f: list){
+                    s = new SoundFile(f);
+                    b = core.addBellSound(s);
+                    if(b)
+                        i++;
+                    
+                }
+                
+                if(i > 0)
+                    message( i + "/" + list.size() + " new sounds added. Any duplicates were skipped");
+                else
+                   message("All selected files were already added"); 
+                
+                setDay();
+                core.save();
             }
-            setDay();
-            core.save();
-        }
+            
+            core.getLog().log(Level.INFO, "Add bell sounds complete");
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Add bell sounds failed: {0}", e.getMessage());
+            message("An error occured trying to add new bell sounds: " + e.getMessage());
+        } 
     }
     
     private void ringBell(){
         if(core.defaultBell != null)
             core.region.quickPlay(core.defaultBell, core.defaultBell.getPlayTime());
         else
-            message("No bell sound has been selected to play");
+            message("No bell sound has been selected to play");        
     }
     
     private TimerTask timeUpdate(){
@@ -859,6 +923,7 @@ public class BellsSimpleGUIController implements Initializable {
             @Override
             public void run() {
                 core.region.cleanSchedule();
+                core.setupLogger();
             }
         };
         
@@ -866,95 +931,118 @@ public class BellsSimpleGUIController implements Initializable {
     } 
     
     private void displaySoundFile(SoundFile s){
-        selectedSound = s;
-        
-        if(s == null){
-            Platform.runLater(() -> { 
-                soundDelete.setDisable(true);
-                soundNameField.setText("");
-                soundLocationLabel.setText("");
-                soundDurationLabel.setText("");
-            }); 
-            return;
-        }
-        
-        Platform.runLater(() -> { 
-            soundDelete.setDisable(false);
-            soundNameField.setText(s.getFileName());
-            soundLocationLabel.setText(s.getFilePath());
-            
-            try{
-                soundDurationLabel.setText(s.getPlayTime() + " seconds");
-            }catch (Exception e){
-                soundDurationLabel.setText("Error " + e.getMessage());
+        try{
+            selectedSound = s;
+
+            if(s == null){
+                Platform.runLater(() -> { 
+                    soundDelete.setDisable(true);
+                    soundNameField.setText("");
+                    soundLocationLabel.setText("");
+                    soundDurationLabel.setText("");
+                }); 
+                return;
             }
-        });
+
+            Platform.runLater(() -> { 
+                soundDelete.setDisable(false);
+                soundNameField.setText(s.getFileName());
+                soundLocationLabel.setText(s.getFilePath());
+
+                try{
+                    soundDurationLabel.setText(s.getPlayTime() + " seconds");
+                }catch (Exception e){
+                    soundDurationLabel.setText("Error " + e.getMessage());
+                }
+            });
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error displaying sound file: {0}", e.getMessage());
+        }
     }
     
     private void openSound(TemplateType type){
-        templateType = type; 
-        if(type ==null || (type != TemplateType.BELLS && type != TemplateType.MUSIC))
-            return;
-        
-        updateSoundTable();
-        displaySoundFile(null);
-        if(type == TemplateType.BELLS){            
-            Platform.runLater(() -> { 
-                soundTitleLabel.setText("Bells");
-                soundPane.setVisible(true);
-                soundDefault.setVisible(true);
-            }); 
-        }else if (type == TemplateType.MUSIC){
-            Platform.runLater(() -> { 
-                soundTitleLabel.setText("Music");
-                soundPane.setVisible(true);
-                soundDefault.setVisible(false);
-            }); 
+        try{
+            core.getLog().log(Level.INFO, "Opening sound window");
+            templateType = type; 
+            if(type ==null || (type != TemplateType.BELLS && type != TemplateType.MUSIC))
+                return;
+
+            updateSoundTable();
+            displaySoundFile(null);
+            if(type == TemplateType.BELLS){            
+                Platform.runLater(() -> { 
+                    soundTitleLabel.setText("Bells");
+                    soundPane.setVisible(true);
+                    soundDefault.setVisible(true);
+                }); 
+            }else if (type == TemplateType.MUSIC){
+                Platform.runLater(() -> { 
+                    soundTitleLabel.setText("Music");
+                    soundPane.setVisible(true);
+                    soundDefault.setVisible(false);
+                }); 
+            }
+        } catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error opening sound window: {0}", e.getMessage());
         }
         
     }
     
     private void updateSoundTable(){
-        if(templateType == TemplateType.BELLS)
-            Platform.runLater(() -> { 
-                soundsTable.getItems().clear();
-                soundsTable.getItems().addAll(core.bellSounds);
-            }); 
-        else if(templateType == TemplateType.MUSIC)
-            Platform.runLater(() -> { 
-                soundsTable.getItems().clear();
-                soundsTable.getItems().addAll(core.musicFiles);
-            }); 
+        try{
+            if(templateType == TemplateType.BELLS)
+                Platform.runLater(() -> { 
+                    soundsTable.getItems().clear();
+                    soundsTable.getItems().addAll(core.getBellSounds());
+                }); 
+            else if(templateType == TemplateType.MUSIC)
+                Platform.runLater(() -> { 
+                    soundsTable.getItems().clear();
+                    soundsTable.getItems().addAll(core.getMusicFiles());
+                }); 
+        }catch (Exception e){
+           core.getLog().log(Level.WARNING, "Error opening sound window: {0}", e.getMessage()); 
+        }
     }
     
     public void openPlayList(){
-        updatePlayListCombo();
-        displayPlayList(null);
-        Platform.runLater(() -> { 
-            playPane.setVisible(true);
-        }); 
+        try{
+            core.getLog().log(Level.INFO, "Opening play list window");
+            updatePlayListCombo();
+            displayPlayList(null);
+            Platform.runLater(() -> { 
+                playPane.setVisible(true);
+            }); 
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error opening play list window: {0}", e.getMessage()); 
+        }
     }
     
     public void displayPlayList(PlayList list){
-        playList = list;
-        if(list == null){
-            Platform.runLater(() -> { 
-                playListTable.getItems().clear();
-                playAllTable.getItems().clear();
-                playName.setText("");
-            }); 
-        }else{
-            Platform.runLater(() -> { 
-                
-                playListTable.getItems().clear();
-                playListTable.getItems().addAll(list.getSoundFiles());
-                
-                playAllTable.getItems().clear();
-                playAllTable.getItems().addAll(core.musicFiles);
-                playAllTable.getItems().removeAll(list.getSoundFiles());
-                
-                playName.setText(list.getPlayListName());
-            });
+        try{
+            core.getLog().log(Level.INFO, "Displaying play list");
+            playList = list;
+            if(list == null){
+                Platform.runLater(() -> { 
+                    playListTable.getItems().clear();
+                    playAllTable.getItems().clear();
+                    playName.setText("");
+                }); 
+            }else{
+                Platform.runLater(() -> { 
+
+                    playListTable.getItems().clear();
+                    playListTable.getItems().addAll(list.getSoundFiles());
+
+                    playAllTable.getItems().clear();
+                    playAllTable.getItems().addAll(core.getMusicFiles());
+                    playAllTable.getItems().removeAll(list.getSoundFiles());
+
+                    playName.setText(list.getPlayListName());
+                });
+            }
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error trying to display a play list: {0}", e.getMessage()); 
         }
     }
     
@@ -966,13 +1054,14 @@ public class BellsSimpleGUIController implements Initializable {
     }
     
     private void addToPlayList(SoundFile file){
-            if(file == null){
-                message("No song selected.");
+        try{
+            if(playList == null){
+                message("No play list selected.");
                 return;
             }
             
-            if(playList == null){
-                message("No play list selected.");
+            if(file == null){
+                message("No song selected.");
                 return;
             }
             
@@ -984,16 +1073,22 @@ public class BellsSimpleGUIController implements Initializable {
             }
             
             displayPlayList(playList);
+        }catch (Exception e){
+            message("Error adding song to play list: " + e.getMessage());
+            core.getLog().log(Level.WARNING, "Error adding song to play list {0}: {1}",
+                    new Object[]{playList.getPlayListName(), e.getMessage()}); 
+        }
     }
     
     private void removeFromPlayList(SoundFile file){
-            if(file == null){
-                message("No song selected.");
+        try{
+            if(playList == null){
+                message("No play list selected.");
                 return;
             }
             
-            if(playList == null){
-                message("No play list selected.");
+            if(file == null){
+                message("No song selected.");
                 return;
             }
             
@@ -1005,11 +1100,17 @@ public class BellsSimpleGUIController implements Initializable {
             }
             
             displayPlayList(playList);
+        }catch (Exception e){
+            message("Error removing song from play list: " + e.getMessage());
+            core.getLog().log(Level.WARNING, "Error removing song from play list {0}: {1}",
+                    new Object[]{playList.getPlayListName(), e.getMessage()}); 
+        }
     }
 
     private void stopMedia() {
         core.region.stopMedia();
         message("Bells stopped.");
+        core.getLog().log(Level.WARNING, "Bells manually stopped"); 
     }
 
     private void setupPlayList() {
@@ -1189,6 +1290,10 @@ public class BellsSimpleGUIController implements Initializable {
             editingEvent.setStartTime(cal.getTime());
         });
         
+        saveEventM.setOnAction((ActionEvent event) -> {
+            openSave(TemplateType.DAY);
+        });
+        
         minEvent.setOnAction((Event event1) -> {
             if(editingEvent == null)
                 return;
@@ -1281,6 +1386,7 @@ public class BellsSimpleGUIController implements Initializable {
         Thread th = new Thread(){
             @Override
             public void run(){
+                try{
                 if(selectedSound == null)
                     return;
                 
@@ -1298,6 +1404,10 @@ public class BellsSimpleGUIController implements Initializable {
                 selectedSound = null;
                 displaySoundFile(null);
                 updateSoundTable();
+                }catch(Exception e){
+                    core.getLog().log(Level.WARNING, "Error deleting song file {0}: {1}",
+                    new Object[]{selectedSound.getFileName(), e.getMessage()}); 
+                }
             }
         };
         
@@ -1307,18 +1417,24 @@ public class BellsSimpleGUIController implements Initializable {
 
     private void deletePlayList() {
         Thread th = new Thread(){
+            
             public void run(){
-                if(playList == null){
-                    message("No playlist selected");
-                    return;
+                try{
+                    if(playList == null){
+                        message("No playlist selected");
+                        return;
+                    }
+
+                    if(!deleteComfirmation())
+                        return;
+
+                    core.removePlayList(playList);
+                    updatePlayListCombo();
+                    displayPlayList(null);
+                }catch(Exception e){
+                    core.getLog().log(Level.WARNING, "Error deleting playList {0}: {1}",
+                        new Object[]{playList.getPlayListName(), e.getMessage()}); 
                 }
-                
-                if(!deleteComfirmation())
-                    return;
-                
-                core.removePlayList(playList);
-                updatePlayListCombo();
-                displayPlayList(null);
             }
         };
         
@@ -1334,37 +1450,103 @@ public class BellsSimpleGUIController implements Initializable {
         prevWeek.setAccelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN));
         editBells.setAccelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN));
         editMusic.setAccelerator(new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN));
+        loadDay.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.SHIFT_DOWN));
+        loadWeek.setAccelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.SHIFT_DOWN));
     }
     
     private void nextDay(){
-        int day = core.currentDayOfWeek;
-        if(day >= 7){
-            boolean b = core.incWeek();
-            if(b){
-                core.setDay(1);
+        try{
+            int day = core.currentDayOfWeek;
+            if(day >= 7){
+                boolean b = core.incWeek();
+                if(b){
+                    core.setDay(1);
+                    setDay();
+                }else
+                    message("Cannot go more then 3 weeks in the future");
+            }else{
+                core.setDay(++day);
                 setDay();
-            }else
-                message("Cannot go more then 3 weeks in the future");
-        }else{
-            core.setDay(++day);
-            setDay();
+            }
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error getting next day: {0}", e.getMessage()); 
         }
     }
 
     private void prevDay(){
+        try{
         int day = core.currentDayOfWeek;
-        if(day <= 1){
-            boolean b = core.decWeek();
-            
-            if(b){
-                core.setDay(7);
+            if(day <= 1){
+                boolean b = core.decWeek();
+
+                if(b){
+                    core.setDay(7);
+                    setDay();
+                }else
+                    message("Cannot go into the past");
+            }else{
+                core.setDay(--day);
                 setDay();
-            }else
-                message("Cannot go into the past");
-        }else{
-            core.setDay(--day);
-            setDay();
+            }
+        }catch(Exception e){
+            core.getLog().log(Level.WARNING, "Error getting previous day: {0}", e.getMessage()); 
         }
+    }
+
+    private void setupDeleteComf() {
+        deleteYes.setOnAction((ActionEvent e) -> {
+            Platform.runLater(() -> { 
+                deletePane.setVisible(false);
+            });  
+            
+            deleteChoice = true;
+            synchronized(deleteNotice){
+                deleteNotice.notifyAll();
+            }
+        });
+        
+        deleteNo.setOnAction((ActionEvent e) -> {
+            Platform.runLater(() -> { 
+                deletePane.setVisible(false);
+            });  
+            
+            deleteChoice = false;
+            synchronized(deleteNotice){
+                deleteNotice.notifyAll();
+            }
+        });
+    }
+
+    private void setupTable() {
+        eventTable.setPlaceholder(new Label("No events scheduled"));
+        eventTable.setRowFactory(tv -> {
+            TableRow<ScheduledEvent> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if ((! row.isEmpty()) ) { //event.getClickCount() == 2 && 
+                    ScheduledEvent rowData = row.getItem();
+                    displayEvent(rowData, false);
+                }
+            });
+            return row ;
+        });
+                
+        startColumn.setCellValueFactory(data -> {
+            try{
+                Date date = data.getValue().getStartTime();
+                return new SimpleStringProperty(timeFormat.format(date));
+            }catch (NullPointerException ex){
+                return new SimpleStringProperty("");
+            }
+        });
+        
+        endColumn.setCellValueFactory(data -> {
+            try{
+                Date date = data.getValue().getStopTime();
+                return new SimpleStringProperty(timeFormat.format(date));
+            }catch (NullPointerException ex){
+                return new SimpleStringProperty("");
+            }
+        });
     }
     
     

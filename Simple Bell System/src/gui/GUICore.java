@@ -11,26 +11,32 @@ import dataStructures.SoundFile;
 import dataStructures.schedules.ScheduledDay;
 import dataStructures.schedules.ScheduledWeek;
 import dataStructures.templates.WeekTemplate;
+import helperClasses.MyLogger;
 import helperClasses.Save;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.HashSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Quinten Holmes
  */
 public class GUICore implements Serializable{
-    private static final long serialVersionUID = 4;
+    private static final long serialVersionUID = 5;
     
     protected BellRegion region;
-    protected transient HashSet<SoundFile> musicFiles;
-    protected transient HashSet<SoundFile> bellSounds;
+    private transient HashSet<SoundFile> musicFiles;
+    private transient HashSet<SoundFile> bellSounds;
     protected transient HashSet<PlayList> playLists;
     protected int currentDayOfWeek;
     protected int currentWeek;
     protected int currentYear;
     protected SoundFile defaultBell;
+    private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
+    
     
     public GUICore(){
         region = new BellRegion();
@@ -39,6 +45,44 @@ public class GUICore implements Serializable{
         playLists = new HashSet();
         defaultBell = null;
         initialize();
+    }
+    
+    public boolean addMusicFile(SoundFile s){
+        if(s != null){
+            LOGGER.log(Level.INFO, "Adding music file [{0}]", s.getFileName());
+            return musicFiles.add(s);
+        }
+        
+        LOGGER.log(Level.INFO, "null music file was attempted to be added");
+        
+        return false;
+    }
+    
+    public int getMusicFileSize(){
+        return musicFiles.size();
+    }
+    
+    public HashSet<SoundFile> getMusicFiles(){
+        return musicFiles;
+    }
+    
+    public boolean addBellSound(SoundFile s){
+        if(s != null){
+            LOGGER.log(Level.INFO, "Adding bell sound [{0}]", s.getFileName());
+            return bellSounds.add(s);
+        }
+        
+        LOGGER.log(Level.INFO, "null bell file was attempted to be added");
+        
+        return false;
+    }
+    
+    public int getBellSoundsSize(){
+        return bellSounds.size();
+    }
+    
+    public HashSet<SoundFile> getBellSounds(){
+        return bellSounds;
     }
     
     public final void initialize(){
@@ -56,6 +100,7 @@ public class GUICore implements Serializable{
         playLists = (HashSet<PlayList>) Save.loadObject("Play_Lists");
         if(playLists == null)
             playLists = new HashSet();
+        setupLogger();
     }
     
     public void setDay(int i){
@@ -130,28 +175,46 @@ public class GUICore implements Serializable{
 
     void setDefaultWeek(WeekTemplate w) {
         region.setDefaultWeekTemplate(w);
+        LOGGER.log(Level.INFO,"Changing default week [{0}]", w.getWeekName());
     }
     
     public void removeBellFile(SoundFile f){
         boolean b = bellSounds.remove(f);
         
         if(b){
-            region.removeFile(f);        
+            region.removeFile(f); 
+            LOGGER.log(Level.INFO,"Removing bell file [{0}]", f.getFileName());
         }
     }
     
     public void removeMusicFile(SoundFile f){
         boolean b = musicFiles.remove(f);
         
-        if(b)
-            region.removeFile(f);  
+        if(b){
+            region.removeFile(f); 
+            LOGGER.log(Level.INFO,"Removing music file [{0}]", f.getFileName());
+        }
     }
     
     public void removePlayList(PlayList list){
         boolean b = playLists.remove(list);
         
-        if(b)
+        if(b){
             region.removePlayList(list);
+            LOGGER.log(Level.INFO,"Removing play list [{0}]", list.getPlayListName());
+        }
+    }
+    
+    public void setupLogger(){
+        try {
+           MyLogger.setup();
+        } catch (IOException ex) {
+           LOGGER.log(Level.SEVERE, "Error setting up log, IOException ", ex.getMessage());
+        }
+    }
+    
+    public Logger getLog(){
+        return LOGGER;
     }
     
 }

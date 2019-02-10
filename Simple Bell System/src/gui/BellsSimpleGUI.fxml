@@ -97,6 +97,7 @@
                   <MenuItem fx:id="loadDay" mnemonicParsing="false" text="Load Day" />
                   <MenuItem fx:id="nextDay" mnemonicParsing="false" text="Next Day" />
                   <MenuItem fx:id="prevDay" mnemonicParsing="false" text="Prev Day" />
+                  <MenuItem fx:id="saveEventM" mnemonicParsing="false" text="Load Event" />
                </items>
             </Menu>
           <Menu mnemonicParsing="false" text="Sounds">
@@ -245,7 +246,7 @@
                         </Button>
                      </children>
                   </HBox>
-                  <Label fx:id="messageLabel" alignment="TOP_CENTER" layoutX="10.0" layoutY="28.0" prefHeight="155.0" prefWidth="375.0" text="Message" textAlignment="CENTER" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0">
+                  <Label fx:id="messageLabel" alignment="CENTER" layoutX="10.0" layoutY="28.0" prefHeight="155.0" prefWidth="375.0" text="Message" textAlignment="CENTER" wrapText="true" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0">
                      <font>
                         <Font size="25.0" />
                      </font>
