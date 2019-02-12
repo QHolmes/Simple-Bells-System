@@ -50,6 +50,9 @@ public class GUICore implements Serializable{
     public boolean addMusicFile(SoundFile s){
         if(s != null){
             LOGGER.log(Level.INFO, "Adding music file [{0}]", s.getFileName());
+             if (!musicFiles.stream().noneMatch((f) -> (f.equals(s)))) {
+                return false;
+            }
             return musicFiles.add(s);
         }
         
@@ -69,6 +72,11 @@ public class GUICore implements Serializable{
     public boolean addBellSound(SoundFile s){
         if(s != null){
             LOGGER.log(Level.INFO, "Adding bell sound [{0}]", s.getFileName());
+            
+            if (!bellSounds.stream().noneMatch((f) -> (f.equals(s)))) {
+                return false;
+            }                
+            
             return bellSounds.add(s);
         }
         

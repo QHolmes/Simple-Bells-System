@@ -13,28 +13,29 @@ import dataStructures.schedules.ScheduledEvent;
 import dataStructures.templates.DayTemplate;
 import dataStructures.templates.EventTemplate;
 import dataStructures.templates.WeekTemplate;
+import helperClasses.Helper;
 import helperClasses.Save;
 import java.io.File;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.ObservableMap;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -50,6 +51,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -137,9 +139,9 @@ public class BellsSimpleGUIController implements Initializable {
     @FXML private HBox playPane;
     @FXML private HBox deletePane;
     
-    private final String timePattern = "hh:mm:ss a";
-    private final String timeDatePattern = "hh:mm:ss a";
-    private final String timeLabelPattern = "hh:mm:ss a";
+    private final String timePattern = "HH:mm:ss";
+    private final String timeDatePattern = "MM.dd.yyyy-HH:mm:ss";
+    private final String timeLabelPattern = "HH:mm:ss";
     private final String dayPattern = "EEEE, MMM dd yyyy";
     private final String namingPattern = "yyyy.MM.dd.HH.mm.ss";
     private final SimpleDateFormat timeFormat;
@@ -154,9 +156,9 @@ public class BellsSimpleGUIController implements Initializable {
     private Stage stage;
     private boolean deleteChoice;
     private final Object deleteNotice;
+    private final HashSet<String> acceptedFileTypes;
     
     GUICore core;
-    private final String FILEPATH = "D:\\Users\\dholmes\\OneDrive\\Music\\OneRepublic\\Native\\01 Counting Stars.m4a";
 
     
     public BellsSimpleGUIController(Stage stage){
@@ -168,6 +170,13 @@ public class BellsSimpleGUIController implements Initializable {
         this.stage = stage;
         deleteChoice = false;
         deleteNotice = new Object();
+        acceptedFileTypes = new HashSet();
+        acceptedFileTypes.addAll( 
+                new ArrayList<String>(){{
+                    add("mp3");add( "wav"); add("m4a"); add("aif"); add("aiff"); add("AAC"); add("pcm");
+                }}
+        );
+        
         
         try{
             GUICore loadedCore = (GUICore) Save.loadObject("GUICore");
@@ -820,21 +829,29 @@ public class BellsSimpleGUIController implements Initializable {
     
     private void addMusic(){
         try{
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Add Music Files");
-            fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Audio Files", "*.mp3", "*.wav", "*.m4a", "*.aif", "*.aiff", "*.AAC", "*.pcm")
-            );
+            DirectoryChooser fileChooser = new DirectoryChooser();
+            fileChooser.setTitle("Add Music Folder");
 
             core.getLog().log(Level.INFO, "Showing add music file chooser");
-            List<File> list = fileChooser.showOpenMultipleDialog(stage);
+            File directory = fileChooser.showDialog(stage);
             core.getLog().log(Level.INFO, "Add music file chooser returned");
 
             SoundFile s;
             int i = 0;
             boolean b;
-            if(list != null){
-                for(File f: list){
+            
+            //list will be null if no files were selected
+            if(directory != null){
+                ArrayList<File> allFiles = new ArrayList();
+                
+                //Get files from all sub folders
+                if(directory.isDirectory())
+                    allFiles.addAll(getAllFiles(directory));
+                else if(directory.isFile())
+                    allFiles.add(directory);
+
+                //Add all new sounds
+                for(File f: allFiles){
                     s = new SoundFile(f);
                     b = core.addMusicFile(s);
                     if(b)
@@ -842,13 +859,15 @@ public class BellsSimpleGUIController implements Initializable {
                     
                 }
                 
+                //Tell user the result
                 if(i > 0)
-                    message( i + "/" + list.size() + " new files added. Any duplicates were skipped");
+                    message( i + "/" + allFiles.size() + " new files added. Any duplicates were skipped");
                 else
                    message("All selected files were already added"); 
                 
                 setDay();
                 core.save();
+                
             }
             
             core.getLog().log(Level.INFO, "Add music file complete");
@@ -860,21 +879,31 @@ public class BellsSimpleGUIController implements Initializable {
     
     private void addBells(){
         try{
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Add Bell Sound Files");
-            fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Audio Files", "*.mp3", "*.wav", "*.m4a", "*.aif", "*.aiff", "*.AAC", "*.pcm")
-            );
+            DirectoryChooser fileChooser = new DirectoryChooser();
+            fileChooser.setTitle("Add Bell Sound Folder");
 
             core.getLog().log(Level.INFO, "Showing add bell sounds chooser");
-            List<File> list = fileChooser.showOpenMultipleDialog(stage);
+            File directory = fileChooser.showDialog(stage);
             core.getLog().log(Level.INFO, "Add bell sounds chooser returned");
 
             SoundFile s;
             int i = 0;
             boolean b;
-            if(list != null){
-                for(File f: list){
+            
+            //list will be null if no files were selected
+            if(directory != null){
+                ArrayList<File> allFiles = new ArrayList();
+                
+                //Get files from all sub folders
+                
+                if(directory.isDirectory())
+                    allFiles.addAll(getAllFiles(directory));
+                else if(directory.isFile())
+                    allFiles.add(directory);
+                
+                //Add all new sounds
+                
+                for(File f: allFiles){
                     s = new SoundFile(f);
                     b = core.addBellSound(s);
                     if(b)
@@ -882,8 +911,9 @@ public class BellsSimpleGUIController implements Initializable {
                     
                 }
                 
+                //Tell user the result
                 if(i > 0)
-                    message( i + "/" + list.size() + " new sounds added. Any duplicates were skipped");
+                    message( i + "/" + allFiles.size() + " new sounds added. Any duplicates were skipped");
                 else
                    message("All selected files were already added"); 
                 
@@ -1027,6 +1057,7 @@ public class BellsSimpleGUIController implements Initializable {
                     playListTable.getItems().clear();
                     playAllTable.getItems().clear();
                     playName.setText("");
+                    playCombo.setValue(null);
                 }); 
             }else{
                 Platform.runLater(() -> { 
@@ -1547,6 +1578,30 @@ public class BellsSimpleGUIController implements Initializable {
                 return new SimpleStringProperty("");
             }
         });
+    }
+
+    private ArrayList<File> getAllFiles(File f) {
+        if(f == null)
+            return new ArrayList();
+        
+        File[] files = f.listFiles();
+        if(files ==null || files.length == 0)
+            return new ArrayList();
+        
+        ArrayList<File> allFiles = new ArrayList();
+        Optional<String> op;
+        for (File file : files) {
+            if(file.isDirectory()){
+                //Recursively get all files and add to list
+                allFiles.addAll(getAllFiles(file)); 
+            }else if(file.isFile()){
+                op = Helper.getFileExtension(file.getName());
+                if(op.isPresent() && acceptedFileTypes.contains(op.get()))
+                    allFiles.add(file);
+            }
+        }
+        
+        return allFiles;
     }
     
     

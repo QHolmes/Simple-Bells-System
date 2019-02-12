@@ -7,6 +7,7 @@ package helperClasses;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Optional;
 
 /**
  *
@@ -44,4 +45,10 @@ public class Helper {
                 return "Not a day";
         }
     }
+    
+    public static Optional<String> getFileExtension(String filename) {
+    return Optional.ofNullable(filename)
+      .filter(f -> f.contains("."))
+      .map(f -> f.substring(filename.lastIndexOf(".") + 1));
+}
 }

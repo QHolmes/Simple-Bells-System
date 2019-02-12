@@ -35,7 +35,7 @@
                   <Font size="25.0" />
                </font>
             </Label>
-            <Label fx:id="timeLabel" layoutX="500.0" layoutY="12.0" text="hh:mm:ss a">
+            <Label fx:id="timeLabel" layoutX="500.0" layoutY="12.0" text="HH:mm:ss">
                <font>
                   <Font size="25.0" />
                </font>
@@ -57,7 +57,7 @@
          <content>
             <VBox prefHeight="200.0" prefWidth="392.0" />
          </content></ScrollPane>
-      <Button fx:id="stopBells" layoutX="34.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="83.0" text="Stop" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="34.0" />
+      <Button fx:id="stopBells" layoutX="34.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="Stop" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="34.0" />
       <AnchorPane layoutX="580.0" layoutY="122.0" prefHeight="54.0" prefWidth="316.0">
          <children>
             <Label layoutX="210.0" text="Seconds" />
@@ -75,12 +75,12 @@
             </HBox>
          </children>
       </AnchorPane>
-      <Button fx:id="newEvent" layoutX="361.0" layoutY="154.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="New Event" AnchorPane.leftAnchor="361.0" AnchorPane.topAnchor="154.0" />
-      <Button fx:id="loadEvent" layoutX="490.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="Load Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="490.0" />
-      <Button fx:id="deleteEvent" disable="true" layoutX="828.0" layoutY="629.0" mnemonicParsing="false" text="Delete Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="828.0" />
-      <Button fx:id="ringBell" layoutX="117.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="115.0" text="Ring Bell" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="117.0" />
-      <Button fx:id="addEvent" disable="true" layoutX="619.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="Add Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="619.0" />
-      <Button fx:id="saveEvent" disable="true" layoutX="361.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="Save Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="361.0" />
+      <Button fx:id="newEvent" layoutX="361.0" layoutY="154.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="182.0" text="New Event" AnchorPane.leftAnchor="361.0" AnchorPane.topAnchor="154.0" />
+      <Button fx:id="loadEvent" layoutX="495.0" layoutY="570.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="142.0" text="Load Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="495.0" />
+      <Button fx:id="deleteEvent" disable="true" layoutX="788.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="123.0" text="Delete Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="788.0" />
+      <Button fx:id="ringBell" layoutX="163.0" layoutY="570.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="149.0" text="Ring Bell" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="163.0" />
+      <Button fx:id="addEvent" disable="true" layoutX="637.0" layoutY="570.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="Add Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="637.0" />
+      <Button fx:id="saveEvent" disable="true" layoutX="361.0" layoutY="629.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="135.0" text="Save Event" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="361.0" />
       <MenuBar layoutX="14.0" layoutY="68.0" minHeight="11.0" prefHeight="36.0" prefWidth="921.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0">
         <menus>
           <Menu mnemonicParsing="false" text="Week">
@@ -111,18 +111,18 @@
       </MenuBar>
       <HBox fx:id="templatePane" alignment="CENTER" fillHeight="false" prefHeight="100.0" prefWidth="200.0" style="-fx-background-color: rgba(40, 40, 40, .5);" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
-            <AnchorPane prefHeight="185.0" prefWidth="469.0" style="-fx-background-color: white;">
+            <AnchorPane prefHeight="185.0" prefWidth="500.0" style="-fx-background-color: white;">
                <children>
-                  <Button fx:id="templateDelete" layoutX="350.0" layoutY="129.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="90.0" text="Delete" AnchorPane.bottomAnchor="8.0" />
-                  <Button fx:id="templateSelect" layoutX="253.0" layoutY="152.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="90.0" text="Select" AnchorPane.bottomAnchor="8.0" />
+                  <Button fx:id="templateDelete" layoutX="350.0" layoutY="129.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="123.0" text="Delete" AnchorPane.bottomAnchor="8.0" />
+                  <Button fx:id="templateSelect" layoutX="178.0" layoutY="141.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="129.0" text="Select" AnchorPane.bottomAnchor="8.0" />
                   <Label fx:id="templateLabel" alignment="CENTER" layoutX="199.0" layoutY="14.0" text="Label" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
                      <font>
                         <Font size="25.0" />
                      </font>
                   </Label>
-                  <ComboBox fx:id="templateCombo" layoutX="29.0" layoutY="83.0" prefHeight="25.0" prefWidth="411.0" />
-                  <Button fx:id="templateDefault" layoutX="29.0" layoutY="129.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="149.0" text="Set Default" AnchorPane.bottomAnchor="8.0" />
-                  <Button fx:id="templateClose" layoutX="420.0" layoutY="14.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="21.0" text="x">
+                  <ComboBox fx:id="templateCombo" layoutX="29.0" layoutY="83.0" prefHeight="25.0" prefWidth="441.0" />
+                  <Button fx:id="templateDefault" layoutX="29.0" layoutY="129.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="149.0" text="Set Default" AnchorPane.bottomAnchor="8.0" />
+                  <Button fx:id="templateClose" layoutX="457.0" layoutY="17.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="21.0" text="x">
                      <font>
                         <Font size="15.0" />
                      </font>
@@ -135,7 +135,7 @@
          <children>
             <AnchorPane prefHeight="162.0" prefWidth="469.0" style="-fx-background-color: white;">
                <children>
-                  <Button fx:id="saveButton" layoutX="331.0" layoutY="123.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="98.0" text="Save" />
+                  <Button fx:id="saveButton" layoutX="287.0" layoutY="116.0" mnemonicParsing="false" prefHeight="32.0" prefWidth="142.0" text="Save" />
                   <Label fx:id="saveLabel" alignment="CENTER" layoutX="199.0" layoutY="14.0" text="Label" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
                      <font>
                         <Font size="25.0" />
@@ -155,7 +155,7 @@
          <children>
             <AnchorPane prefHeight="463.0" prefWidth="738.0" style="-fx-background-color: white;">
                <children>
-                  <Button fx:id="soundDelete" layoutX="617.0" layoutY="299.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="107.0" text="Delete" AnchorPane.bottomAnchor="12.0" />
+                  <Button fx:id="soundDelete" layoutX="588.0" layoutY="299.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="136.0" text="Delete" AnchorPane.bottomAnchor="12.0" />
                   <Label fx:id="soundTitleLabel" alignment="CENTER" layoutX="192.0" layoutY="12.0" prefHeight="36.0" prefWidth="278.0" text="Bells" AnchorPane.leftAnchor="192.0" AnchorPane.rightAnchor="-1.0">
                      <font>
                         <Font size="25.0" />
@@ -188,9 +188,9 @@
                   </Label>
                   <Label fx:id="soundLocationLabel" alignment="TOP_LEFT" layoutX="310.0" layoutY="160.0" prefHeight="111.0" prefWidth="424.0" text="Label" wrapText="true" AnchorPane.leftAnchor="310.0" AnchorPane.rightAnchor="4.0" />
                   <Label fx:id="soundDurationLabel" layoutX="310.0" layoutY="287.0" prefHeight="17.0" prefWidth="424.0" text="Label" AnchorPane.leftAnchor="310.0" AnchorPane.rightAnchor="4.0" />
-                  <Button fx:id="addSoundFile" layoutX="310.0" layoutY="426.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="115.0" text="Add Files" AnchorPane.bottomAnchor="12.0" />
+                  <Button fx:id="addSoundFile" layoutX="302.0" layoutY="426.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="136.0" text="Add Files" AnchorPane.bottomAnchor="12.0" />
                   <TextField fx:id="soundNameField" layoutX="310.0" layoutY="90.0" prefHeight="25.0" prefWidth="388.0" />
-                  <Button fx:id="soundDefault" layoutX="425.0" layoutY="426.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="123.0" text="Default" AnchorPane.bottomAnchor="12.0" />
+                  <Button fx:id="soundDefault" layoutX="437.0" layoutY="426.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="129.0" text="Default" AnchorPane.bottomAnchor="12.0" />
                </children>
             </AnchorPane>
          </children>
@@ -199,7 +199,7 @@
          <children>
             <AnchorPane prefHeight="436.0" prefWidth="760.0" style="-fx-background-color: white;">
                <children>
-                  <Button fx:id="playDelete" layoutX="599.0" layoutY="386.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="149.0" text="Delete Play List" />
+                  <Button fx:id="playDelete" layoutX="599.0" layoutY="386.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="149.0" text="Delete List" />
                   <Button fx:id="playClose" layoutX="429.0" layoutY="14.0" mnemonicParsing="false" prefHeight="32.0" prefWidth="27.0" text="x" AnchorPane.rightAnchor="7.0" AnchorPane.topAnchor="7.0">
                      <font>
                         <Font size="15.0" />
@@ -218,7 +218,7 @@
                         <Font name="System Bold" size="12.0" />
                      </font>
                   </Label>
-                  <Button fx:id="playNew" layoutX="599.0" layoutY="341.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="149.0" text="New Play List" AnchorPane.leftAnchor="599.0" AnchorPane.topAnchor="341.0" />
+                  <Button fx:id="playNew" layoutX="599.0" layoutY="341.0" mnemonicParsing="false" prefHeight="36.0" prefWidth="149.0" text="New List" AnchorPane.leftAnchor="599.0" AnchorPane.topAnchor="341.0" />
                   <TextField fx:id="playName" layoutX="346.0" layoutY="27.0" prefHeight="25.0" prefWidth="337.0" />
                   <ComboBox fx:id="playCombo" layoutX="20.0" layoutY="27.0" prefHeight="25.0" prefWidth="243.0" AnchorPane.leftAnchor="20.0" AnchorPane.topAnchor="27.0" />
                   <TableView fx:id="playListTable" layoutX="20.0" layoutY="62.0" prefHeight="363.0" prefWidth="273.0" AnchorPane.bottomAnchor="11.0" AnchorPane.topAnchor="62.0">
@@ -239,7 +239,7 @@
                <children>
                   <HBox alignment="CENTER" layoutX="98.0" layoutY="215.0" prefHeight="32.0" prefWidth="200.0" AnchorPane.bottomAnchor="9.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
                      <children>
-                        <Button fx:id="messageButton" mnemonicParsing="false" prefHeight="32.0" prefWidth="87.0" text="Close">
+                        <Button fx:id="messageButton" mnemonicParsing="false" prefHeight="37.0" prefWidth="136.0" text="Close">
                            <font>
                               <Font size="16.0" />
                            </font>
@@ -255,7 +255,7 @@
             </AnchorPane>
          </children>
       </HBox>
-      <HBox fx:id="deletePane" alignment="CENTER" fillHeight="false" layoutX="10.0" layoutY="10.0" prefHeight="100.0" prefWidth="200.0" style="-fx-background-color: rgba(40, 40, 40, .5);" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="10.0">
+      <HBox fx:id="deletePane" alignment="CENTER" fillHeight="false" layoutX="10.0" layoutY="10.0" prefHeight="100.0" prefWidth="200.0" style="-fx-background-color: rgba(40, 40, 40, .5);" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
             <AnchorPane minHeight="181.0" minWidth="395.0" prefHeight="181.0" prefWidth="395.0" style="-fx-background-color: white;">
                <children>
@@ -264,12 +264,12 @@
                         <Font size="25.0" />
                      </font>
                   </Label>
-                  <Button fx:id="deleteYes" layoutX="43.0" layoutY="130.0" mnemonicParsing="false" prefHeight="32.0" prefWidth="87.0" text="Yes" AnchorPane.leftAnchor="45.0">
+                  <Button fx:id="deleteYes" layoutX="43.0" layoutY="130.0" mnemonicParsing="false" prefHeight="37.0" prefWidth="115.0" text="Yes" AnchorPane.leftAnchor="45.0">
                      <font>
                         <Font size="16.0" />
                      </font>
                   </Button>
-                  <Button fx:id="deleteNo" layoutX="241.0" layoutY="130.0" mnemonicParsing="false" prefHeight="32.0" prefWidth="87.0" text="No" AnchorPane.rightAnchor="45.0">
+                  <Button fx:id="deleteNo" layoutX="241.0" layoutY="130.0" mnemonicParsing="false" prefHeight="37.0" prefWidth="115.0" text="No" AnchorPane.rightAnchor="45.0">
                      <font>
                         <Font size="16.0" />
                      </font>
