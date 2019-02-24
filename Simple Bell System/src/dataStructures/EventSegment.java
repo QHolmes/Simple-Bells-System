@@ -18,6 +18,7 @@ public class EventSegment implements Serializable{
     private SoundFile file;
     private double duration;
     private boolean running;
+    private PlayList playList;
 
     public EventSegment(SegmentType type, SoundFile file, double duration) {
         this.type = type;
@@ -26,6 +27,9 @@ public class EventSegment implements Serializable{
     }
 
     public SoundFile getFile() {
+        if(type == SegmentType.PLAYLIST)
+            return playList.getRandomSoundFile();
+        
         return file;
     }
 
@@ -42,14 +46,14 @@ public class EventSegment implements Serializable{
     }
 
     /**
-     * Gives the length of time the given segment will be played.
-     * @return 
+     * Gives the length of time, in seconds, the given segment is set to be played.
+     * @return time in seconds
      */
     public double getDuration() {
-        if(duration > 0)
+        if(duration > 0.0)
             return duration;
         
-        if(file != null)
+        if(file != null && type == SegmentType.SOUND)
             return file.getPlayTime();
         else
             return 0;
@@ -61,15 +65,20 @@ public class EventSegment implements Serializable{
      * is Sound the duration will become the length of the sound clip. If the type is
      * silence the duration cannot be 0 or less.
      * @param duration 
+     * @return
      */
     public boolean setDuration(double duration) {
         if(running)
             return false;
         
-        if(duration <= 0 && type == SegmentType.SILENCE)
+        if(duration <= 0 && (type == SegmentType.SILENCE || type == SegmentType.PLAYLIST))
             return false;
         
-        this.duration = duration;
+        if(duration <= 0.0)
+            this.duration = file.getPlayTime();
+        else
+            this.duration = duration;
+        
         return true;
     }
     
@@ -83,6 +92,10 @@ public class EventSegment implements Serializable{
     
     public EventSegment clone(){
         EventSegment cl = new EventSegment(type, file, duration);
+        
+        if(playList != null)
+            cl.setPlayList(playList);
+        
         return cl;
     }
 
@@ -95,6 +108,51 @@ public class EventSegment implements Serializable{
             this.type = type;
     }
     
+    /**
+     * Removes the given sound file from the segment. If this segment is using the
+     * removed file, the type will be changed to SILENCE. Will not remove the file if 
+     * the segment is running.
+     * @param file file to remove
+     */
+    public void removeFile(SoundFile file){
+        if(running)
+            return;
+        
+        if(type == SegmentType.SOUND && this.file.equals(file)){
+            if(duration <= 0.0)
+                duration = file.getPlayTime();
+            
+            this.file = null;
+            type = SegmentType.SILENCE;            
+        }
+    }
+    
+    public PlayList getPlayList(){
+        return playList;              
+    }
+    
+    /**
+     * Removes the given PlayList from the segment. If this segment is using the
+     * removed play list, the type will be changed to SILENCE. Will not remove the PlayList
+     * if the segment is running.
+     * @param list PlayList to try to remove
+     */
+    public void removePlayList(PlayList list){
+        if(running)
+            return;
+        
+        if(type == SegmentType.PLAYLIST && playList.equals(list)){
+            playList = null;
+            type = SegmentType.SILENCE;
+        }
+        
+    }
+
+    public boolean setPlayList(PlayList playList) {
+        if(!running)
+            this.playList = playList;
+        return !running;
+    }
     
     
 }

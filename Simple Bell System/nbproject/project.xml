@@ -15,8 +15,8 @@
         <data xmlns="http://www.netbeans.org/ns/j2se-project/3">
             <name>Simple Bell System</name>
             <source-roots>
-                <root id="src.resource.dir"/>
                 <root id="src.src.dir" name="Source Packages"/>
+                <root id="src.resources.dir"/>
                 <root id="src.lib.dir"/>
             </source-roots>
             <test-roots/>

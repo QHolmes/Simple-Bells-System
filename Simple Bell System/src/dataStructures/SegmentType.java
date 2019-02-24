@@ -11,6 +11,6 @@ package dataStructures;
  */
 public enum SegmentType {
     
-    SOUND, BELL, SILENCE
+    SOUND, BELL, SILENCE, PLAYLIST
     
 }
