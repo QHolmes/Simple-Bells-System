@@ -21,7 +21,7 @@ public class Save {
     private static HashSet<String> saving = new HashSet();
     
 	public static void saveObject(Serializable obj, String objName){
-            String location = new JFileChooser().getFileSystemView().getDefaultDirectory().toString() + "\\Java Simple Bells\\" + objName + ".ser";
+            String location = System.getProperty("user.home") + "/Library/JavaSimpleBells/" + objName + ".ser";
             
             if(saving.contains(location))
                 return;
@@ -40,7 +40,7 @@ public class Save {
                     //core.getLogger().log(Level.FINER, "Saving core - {0}", location);
 		}catch (FileNotFoundException e){
                     //If the folder does not exist, create it and try again
-                    String fileLocation = new JFileChooser().getFileSystemView().getDefaultDirectory().toString() + "\\Java Simple Bells";
+                    String fileLocation = System.getProperty("user.home") + "/Library/JavaSimpleBells";
                     if(new File(fileLocation).mkdirs()){
                         //core.getLogger().log(Level.FINER, "Created save folder - {0}", fileLocation);
                         saveObject(obj, objName);
@@ -66,7 +66,7 @@ public class Save {
 	
 	public static Serializable loadObject(String objName){
             Serializable obj = null;
-            String location = new JFileChooser().getFileSystemView().getDefaultDirectory().toString() + "\\Java Simple Bells\\" + objName +".ser";
+            String location = System.getProperty("user.home") + "/Library/JavaSimpleBells/" + objName + ".ser";
             
             
             int i = 0;
@@ -108,5 +108,12 @@ public class Save {
             }
             
             return obj;
+        }
+        
+        public static void setUp(){
+            String location = System.getProperty("user.home") + "/Library/";
+            new File(location).mkdirs();
+            location = System.getProperty("user.home") + "/Library/JavaSimpleBells";
+            new File(location).mkdirs();
         }
 }

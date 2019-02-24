@@ -8,8 +8,8 @@ package gui;
 import dataStructures.BellRegion;
 import dataStructures.PlayList;
 import dataStructures.SoundFile;
-import dataStructures.schedules.ScheduledDay;
-import dataStructures.schedules.ScheduledWeek;
+import dataStructures.schedules.DayScheduled;
+import dataStructures.schedules.WeekScheduled;
 import dataStructures.templates.WeekTemplate;
 import helperClasses.MyLogger;
 import helperClasses.Save;
@@ -39,6 +39,7 @@ public class GUICore implements Serializable{
     
     
     public GUICore(){
+        Save.setUp();
         region = new BellRegion();
         musicFiles = new HashSet();
         bellSounds = new HashSet();
@@ -116,12 +117,24 @@ public class GUICore implements Serializable{
             currentDayOfWeek = i;
     }
     
-    public ScheduledDay getCurrentDay(){
-        return getSelectedWeek().getDay(currentDayOfWeek);
+    public DayScheduled getCurrentDay(){
+        while(true)
+            try {
+                return getSelectedWeek().getDay(currentDayOfWeek);
+            } catch (InterruptedException ex) {
+                LOGGER.log(Level.WARNING, "Interrupted Exception while getting the current Day of the week-- {0}",
+                        ex.getMessage());
+            }
     }
     
-    public ScheduledWeek getSelectedWeek(){
-        return region.getWeek(currentWeek, currentYear);
+    public WeekScheduled getSelectedWeek(){
+        while(true)
+            try {
+                return region.getWeek(currentWeek, currentYear);
+            } catch (InterruptedException ex) {
+                LOGGER.log(Level.WARNING, "Interrupted Exception while getting the selected week-- {0}",
+                        ex.getMessage());
+            }
     }
     
     public boolean incWeek(){
@@ -181,35 +194,68 @@ public class GUICore implements Serializable{
         
     }
 
-    void setDefaultWeek(WeekTemplate w) {
+    public void setDefaultWeek(WeekTemplate w) {
         region.setDefaultWeekTemplate(w);
-        LOGGER.log(Level.INFO,"Changing default week [{0}]", w.getWeekName());
+        String name = "";
+        while(name.isEmpty()){
+            try {
+                name = w.getWeekName();
+            } catch (InterruptedException ex) {
+                LOGGER.log(Level.WARNING, "Interrupted Exception while getting the name of the newly selected week-- {0}",
+                        ex.getMessage());
+            }
+        }//End while
+        LOGGER.log(Level.INFO,"Changing default week [{0}]", name);
+    }
+    
+    
+    public WeekTemplate getDefaultWeek(){
+        return region.getDefaultWeekTemplate();
     }
     
     public void removeBellFile(SoundFile f){
         boolean b = bellSounds.remove(f);
         
         if(b){
-            region.removeFile(f); 
-            LOGGER.log(Level.INFO,"Removing bell file [{0}]", f.getFileName());
+            while(true)
+                try {
+                    region.removeFile(f);
+                    LOGGER.log(Level.INFO,"Removing bell file [{0}]", f.getFileName());
+                    return;
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "Interrupted Exception while removing bell file-- {0}",
+                        ex.getMessage());
+                }
         }
     }
     
     public void removeMusicFile(SoundFile f){
         boolean b = musicFiles.remove(f);
-        
         if(b){
-            region.removeFile(f); 
-            LOGGER.log(Level.INFO,"Removing music file [{0}]", f.getFileName());
+            while(true)
+                try {
+                    region.removeFile(f); 
+                    LOGGER.log(Level.INFO,"Removing music file [{0}]", f.getFileName());
+                    return;
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "Interrupted Exception while removing music file-- {0}",
+                        ex.getMessage());
+                }
         }
     }
     
     public void removePlayList(PlayList list){
         boolean b = playLists.remove(list);
-        
         if(b){
-            region.removePlayList(list);
-            LOGGER.log(Level.INFO,"Removing play list [{0}]", list.getPlayListName());
+            while(true)
+                try {
+                    region.removePlayList(list);
+                    LOGGER.log(Level.INFO,"Removing play list [{0}]", list.getPlayListName());
+                    return;
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "Interrupted Exception while removing play list-- {0}",
+                        ex.getMessage());
+                }
         }
     }
     
@@ -218,6 +264,7 @@ public class GUICore implements Serializable{
            MyLogger.setup();
         } catch (IOException ex) {
            LOGGER.log(Level.SEVERE, "Error setting up log, IOException ", ex.getMessage());
+           ex.printStackTrace();
         }
     }
     

@@ -7,10 +7,11 @@ package audioSystem;
 
 import dataStructures.EventSegment;
 import dataStructures.SegmentType;
-import dataStructures.schedules.ScheduledEvent;
+import dataStructures.schedules.EventScheduled;
 import dataStructures.SoundFile;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -27,7 +28,7 @@ public class AudioPlayer {
     private MediaPlayer mediaPlayer;
     private ClassLoader classloader = Thread.currentThread().getContextClassLoader();
     private static AudioPlayer player;
-    private ScheduledEvent event;
+    private EventScheduled event;
     private boolean playingTrack = false;
     private final Timer timer;
     private TimerTask lastTask;
@@ -44,7 +45,7 @@ public class AudioPlayer {
        timer = new Timer();
     }
     
-    public void setBellEvent(ScheduledEvent b){
+    public void setBellEvent(EventScheduled b) throws InterruptedException{
         //End current task if applicable 
         if(lastTask != null && event != null)
             lastTask.cancel();
@@ -55,11 +56,16 @@ public class AudioPlayer {
             return;
         
         scheduleEvent();
-        timer.schedule(lastTask, b.getStartTime());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime start = b.getStartTime();
+        long time = now.until(start, ChronoUnit.MILLIS);
+        if(time < 0)
+            time = 0;
+        timer.schedule(lastTask, time);
             
     }
     
-    public ScheduledEvent getBellEvent(){
+    public EventScheduled getBellEvent(){
         return event;
     }
     
@@ -110,7 +116,11 @@ public class AudioPlayer {
             @Override
             public void run() {
                 long stamp = 0;
-                ScheduledEvent playinegEvent = event;
+                
+                if(event == null)
+                    return;
+                
+                EventScheduled playinegEvent = event;
                 
                 try {
                     stamp = event.readLockSegments();
@@ -122,43 +132,48 @@ public class AudioPlayer {
                         event.setRunning(true);
                         ArrayList<EventSegment> segments = event.getSegments();
                         
-                        Date start = event.getStartTime();
-                        Date end = event.getStopTime();
-                        Date now  = new Date();
-                        long diff = (now.getTime() - start.getTime()) / 1000;
+                        LocalDateTime start = event.getStartTime();
+                        LocalDateTime end = event.getStopTime();
+                        LocalDateTime now  = LocalDateTime.now();
+                        long diff = (start.until(now, ChronoUnit.MILLIS)) / 1000;
                         
-                        double duration = 0;
+                        double duration = 0.0;
                         int index = -1;
-                        
-                        while(duration <= 0.0 && index < segments.size()){
+                        double length;
+                        do{
                             index++;
-                            duration = segments.get(index).getDuration() - diff;
-                            diff -= segments.get(index).getDuration();
-                        }
+                            length = segments.get(index).getDuration();
+                            duration = length- diff;
+                            diff -= length;
+                        }while(diff > 0.0001 && index + 1< segments.size());
                         
-                        if(duration <= 0.0 || index >= segments.size()){
+                        if(diff > 0.0001 || index >= segments.size()){
                             return;
                         }
+                        
+                        if(index < 0)
+                            index = 0;
+                        
                         EventSegment s;
-                        for(int i = index; i < segments.size() && event != null; i++){
+                        for(int i = index; i < segments.size() && event != null && !event.isCancelled(); i++){
                             s = segments.get(i);
                             s.setRunning(true);
                             file = s.getFile();
                             if(s.getType() == SegmentType.SOUND || s.getType() == SegmentType.BELL && file != null){
-                                System.out.printf("Playing %s for %.0f seconds.%n", file.getFileName(), duration);
+                                System.out.printf("[%d] Playing %s for %.0f seconds.%n", i, file.getFileName(), duration);
                                 play(file, duration);
                                 Thread.sleep((long) Math.ceil(duration) * 1000);
                                 stop();
                             }else if (s.getType() == SegmentType.PLAYLIST && file != null && s.getPlayList() != null){
-                                System.out.printf("Playing %s for %.0f seconds. From playlist %s.%n", 
-                                        file.getFileName(), duration, s.getPlayList().toString());
+                                System.out.printf("[%d] Playing %s for %.0f seconds. From playlist %s.%n", 
+                                        i, file.getFileName(), duration, s.getPlayList().toString());
                                 play(file, duration);
                                 Thread.sleep((long) Math.ceil(duration) * 1000);
                                 stop();
                             }else{
                                 if(s.getType() != SegmentType.SILENCE && s.getFile() != null)
-                                    System.out.println("Sound file is null, sleeping instead");
-                                System.out.printf("Sleeping for %.0f seconds. %n", duration);
+                                    System.out.printf("[%d] Sound file is null, sleeping instead.%n", i, duration);
+                                System.out.printf("[%d] Sleeping for %.0f seconds. %n", i, duration);
                                 if(duration > 0)
                                     Thread.sleep((long) Math.ceil(duration) * 1000);
                             }

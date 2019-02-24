@@ -7,6 +7,7 @@ package helperClasses;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.FileHandler;
@@ -51,10 +52,10 @@ public class MyLogger {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM-dd-yyyy");
             String date = simpleDateFormat.format(new Date());
         
-        String locateTxt = new JFileChooser().getFileSystemView().getDefaultDirectory().toString() + "\\Java Simple Bells\\Logs\\Log-" + date + ".txt";
-        String locateHTML = new JFileChooser().getFileSystemView().getDefaultDirectory().toString() + "\\Java Simple Bells\\Logs\\Log-" + date + ".html";
+        String locateTxt = System.getProperty("user.home") + "/Library/JavaSimpleBells/Logs/Log-" + date + ".txt";
+        String locateHTML = System.getProperty("user.home") + "/Library/JavaSimpleBells/Logs/Log-" + date + ".html";
         
-        String fileLocation = new JFileChooser().getFileSystemView().getDefaultDirectory().toString() + "\\Java Simple Bells\\Logs";
+        String fileLocation = System.getProperty("user.home") + "/Library/JavaSimpleBells/Logs";
         
         File directory = new File(fileLocation);
         
@@ -62,8 +63,14 @@ public class MyLogger {
             directory.mkdir();
             
         logger.setLevel(Level.FINE);
-        fileTxt = new FileHandler(locateTxt, true);
-        fileHTML = new FileHandler(locateHTML, true);
+        try{
+            fileTxt = new FileHandler(locateTxt, true);
+            fileHTML = new FileHandler(locateHTML, true);
+        }catch(NoSuchFileException e){
+            directory.mkdir();
+            fileTxt = new FileHandler(locateTxt, true);
+            fileHTML = new FileHandler(locateHTML, true);
+        }
 
         // create a TXT formatter
         formatterTxt = new SimpleFormatter();

@@ -6,21 +6,27 @@
 package dataStructures;
 
 import audioSystem.AudioPlayer;
-import dataStructures.schedules.ScheduledDay;
-import dataStructures.schedules.ScheduledEvent;
-import dataStructures.schedules.ScheduledWeek;
+import dataStructures.schedules.DayScheduled;
+import dataStructures.schedules.EventScheduled;
+import dataStructures.schedules.WeekScheduled;
 import dataStructures.templates.DayTemplate;
 import dataStructures.templates.EventTemplate;
 import dataStructures.templates.WeekTemplate;
 import helperClasses.Helper;
 import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.locks.StampedLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -32,7 +38,7 @@ public class BellRegion implements Serializable{
     private final ArrayList<DayTemplate> dayTemplates;
     private final ArrayList<EventTemplate> eventTemplates;
     private final ArrayList<WeekTemplate> weekTemplates;
-    private final ArrayList<ScheduledWeek> schedule;
+    private final ArrayList<WeekScheduled> schedule;
     private WeekTemplate defaultWeekTemplate;
     
     private final StampedLock scheduleLock;
@@ -59,18 +65,18 @@ public class BellRegion implements Serializable{
         timer.scheduleAtFixedRate(schedulerTask, 0, 100);
     }
     
-    public boolean addScheduledWeek(ScheduledWeek newWeek){
+    public boolean addScheduledWeek(WeekScheduled newWeek) throws InterruptedException{
         if(newWeek == null)
             return false;
         
         long stamp = scheduleLock.writeLock();
         
         try{
-            ArrayList<ScheduledWeek> oldWeeks = new ArrayList();
-            schedule.forEach((w) -> {
-                if(Helper.isSameWeek(newWeek.getDate(), w.getDate()))
+            ArrayList<WeekScheduled> oldWeeks = new ArrayList();
+            for(WeekScheduled w: schedule){
+                if(newWeek.getDate().isEqual(w.getDate()))
                     oldWeeks.add(w);
-                });
+            }
             
                 oldWeeks.forEach(w -> schedule.remove(w));
             
@@ -187,19 +193,18 @@ public class BellRegion implements Serializable{
     /**
      * Removes past weeks from the schedule.
      */
-    public void cleanSchedule(){
+    public void cleanSchedule() throws InterruptedException{
         
-        ArrayList<ScheduledWeek> remove = new ArrayList();
-        Calendar cal = Calendar.getInstance();
-        cal.setWeekDate(cal.get(Calendar.WEEK_OF_YEAR), cal.get(Calendar.YEAR), 1);
-        cal.add(Calendar.WEEK_OF_YEAR, -1);
-        Date firstOfWeek = cal.getTime();
+        ArrayList<WeekScheduled> remove = new ArrayList();
+        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+        LocalDate firstOfWeek = LocalDate.now().minusWeeks(1).with(weekFields.dayOfWeek(), 1);
         
         long stamp = scheduleLock.readLock();
         try{
-            schedule.stream().filter((w) -> (w.getDate().before(firstOfWeek))).forEachOrdered((w) -> {
-                remove.add(w);
-            });
+            for(WeekScheduled w: schedule){
+                if(w.getDate().isBefore(firstOfWeek))
+                    remove.add(w);
+            }
         }finally{
             scheduleLock.unlockRead(stamp);
         }
@@ -217,15 +222,16 @@ public class BellRegion implements Serializable{
      * scheduled week for this week, this method will create an empty week.
      * @return The scheduled week for the current week
      */
-    public ScheduledWeek getCurrentWeek(){
-        Date today = new Date();
-        long stamp = scheduleLock.readLock();
+    public WeekScheduled getCurrentWeek() throws InterruptedException{
         
+        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+        LocalDate today = LocalDate.now().with(weekFields.dayOfWeek(), 1);
+        long stamp = scheduleLock.readLock();
         try{
-            for(ScheduledWeek w: schedule){
-                if(Helper.isSameWeek(w.getDate(), today))
+            for(WeekScheduled w: schedule){
+                if(w.getDate().isEqual(today))
                     return w;
-                else if (w.getDate().after(today))
+                else if (w.getDate().isAfter(today))
                     break;                
             }
         }finally {
@@ -235,7 +241,7 @@ public class BellRegion implements Serializable{
         //Create new week since there is no current week
         Calendar cal = Calendar.getInstance();
        
-        ScheduledWeek week = defaultWeekTemplate.createScheduledWeek(cal.get(Calendar.WEEK_OF_YEAR), cal.get(Calendar.YEAR));
+        WeekScheduled week = defaultWeekTemplate.getScheduledWeek(cal.get(Calendar.WEEK_OF_YEAR), cal.get(Calendar.YEAR));
         addScheduledWeek(week);
         
         return week;
@@ -248,25 +254,27 @@ public class BellRegion implements Serializable{
      * @param year year the week is in
      * @return 
      */
-    public ScheduledWeek getWeek(int weekOfYear, int year){
-        Calendar cal = Calendar.getInstance();
-        cal.setWeekDate(year, weekOfYear, 1);
-        Date weekDate = cal.getTime();
+    public WeekScheduled getWeek(int weekOfYear, int year) throws InterruptedException{
+        WeekFields weekFields = WeekFields.of(Locale.getDefault());
+        LocalDate local = LocalDate.now()
+                            .withYear(year)
+                            .with(weekFields.weekOfYear(), weekOfYear)
+                            .with(weekFields.dayOfWeek(), 1);
         
         long stamp = scheduleLock.readLock();
         
         try{
-            for(ScheduledWeek w: schedule){
-                if(Helper.isSameWeek(w.getDate(), weekDate ))
+            for(WeekScheduled w: schedule){
+                if(w.getDate().isEqual(local))
                     return w;
-                else if (w.getDate().after(weekDate))
+                else if (w.getDate().isAfter(local))
                     break;                
             }
         }finally {
             scheduleLock.unlockRead(stamp);
         }
         
-        ScheduledWeek week = defaultWeekTemplate.createScheduledWeek(weekOfYear, year);
+        WeekScheduled week = defaultWeekTemplate.getScheduledWeek(weekOfYear, year);
         addScheduledWeek(week);
         
         return week;
@@ -282,25 +290,40 @@ public class BellRegion implements Serializable{
     }
 
     public void stopMedia() {
-        player.fullStop();
+        EventScheduled e = player.getBellEvent();
+        
+        while(true)
+            try {
+                if(e.isRunning())
+                    e.cancelEvent(true);
+                player.fullStop();
+                return;
+            } catch (InterruptedException ex) {}
     }
 
-    public void removePlayList(PlayList list) {
-        weekTemplates.forEach(w -> w.removePlayList(list));
-        schedule.forEach(w -> w.removePlayList(list));
+    public void removePlayList(PlayList list) throws InterruptedException {
+        for(WeekTemplate w: weekTemplates)
+            w.removePlayList(list);
+        
+        for(WeekScheduled w: schedule)
+            w.removePlayList(list);
     }
     
     
     class scheduleComparator implements Comparator {
         @Override
         public int compare(Object o1, Object o2) {
-            if(!(o1 instanceof ScheduledWeek))
+            if(!(o1 instanceof WeekScheduled))
                 return 0;
             
             if(o2 == null)
                 return 0;
             
-            return ((ScheduledWeek) o1).getDate().compareTo(((ScheduledWeek) o2).getDate());
+            try {
+                return ((WeekScheduled) o1).getDate().compareTo(((WeekScheduled) o2).getDate());
+            } catch (InterruptedException ex) {
+                return 0;
+            }
         }        
     }
     
@@ -308,37 +331,41 @@ public class BellRegion implements Serializable{
         TimerTask th = new TimerTask(){
             @Override
             public void run() {
-                //Get the current week and ensure its not null
-                ScheduledWeek w = getCurrentWeek();
-                if(w == null)
-                    return;
-                
-                //Get the current day and ensure its not null
-                ScheduledDay day = w.getDay(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));                
-                if( day == null)
-                    return;
-                
-                //Get the next event, ensure its not null
-                ScheduledEvent event = day.getNextEvent();
-                if(event == null)
-                    return;
-                
-                Calendar sec3 = Calendar.getInstance();
-                sec3.add(Calendar.SECOND, 3);
-                
-                boolean past = event.getStopTime().before(new Date());
-                boolean toSoon = event.getStartTime().after(sec3.getTime());
-                Date dat = sec3.getTime();
-                
-                //If the event is within the next 3 seconds, see if it sould be scheduled
-                if(past || toSoon)
-                    return;
-                
-                //If the event is not the current event, and the current event is done schedule event
-                if(player.getBellEvent() == null 
-                        || (player.getBellEvent().compareTo(event) != 0 
-                        && player.getBellEvent().getStopTime().before(new Date())))
-                    player.setBellEvent(event);
+                try{
+                    //Get the current week and ensure its not null
+                    WeekScheduled w = getCurrentWeek();
+                    if(w == null)
+                        return;
+
+                    //Get the current day and ensure its not null
+                    DayScheduled day = w.getDay(Calendar.getInstance().get(Calendar.DAY_OF_WEEK));                
+                    if( day == null)
+                        return;
+
+                    //Get the next event, ensure its not null
+                    EventScheduled event = day.getNextEvent();
+                    if(event == null || event.isCancelled())
+                        return;
+
+                    LocalDateTime sec3 = LocalDateTime.now().plusSeconds(3);
+
+                    boolean past = event.getStopTime().isBefore(LocalDateTime.now());
+                    boolean toSoon = event.getStartTime().isAfter(sec3);
+
+                    //If the event is within the next 3 seconds, see if it sould be scheduled
+                    if(past || toSoon)
+                        return;
+
+                    //If the event is not the current event, and the current event is done schedule event
+                    if(player.getBellEvent() == null 
+                            || (player.getBellEvent().compareTo(event) != 0 
+                            && player.getBellEvent().getStopTime().isBefore(LocalDateTime.now())))
+                        player.setBellEvent(event);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(BellRegion.class.getName()).log(Level.SEVERE, null, ex);
+                }finally{
+                    
+                }
             }
         };
         
@@ -361,9 +388,12 @@ public class BellRegion implements Serializable{
         player.quickPlay(f, duration);
     }
     
-    public void removeFile(SoundFile f){
-        weekTemplates.forEach(w -> w.removeFile(f));
-        schedule.forEach(w -> w.removeFile(f));
+    public void removeFile(SoundFile f) throws InterruptedException{
+        for(WeekTemplate w: weekTemplates)
+            w.removeFile(f);
+        
+        for(WeekScheduled w: schedule)
+            w.removeFile(f);
     }
     
 }

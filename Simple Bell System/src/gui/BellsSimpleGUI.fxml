@@ -89,6 +89,7 @@
                   <MenuItem fx:id="prevWeek" mnemonicParsing="false" text="Prev Week" />
                   <MenuItem fx:id="saveWeek" mnemonicParsing="false" text="Save Week" />
                   <MenuItem fx:id="loadWeek" mnemonicParsing="false" text="Load Week" />
+                  <MenuItem fx:id="resetWeek" mnemonicParsing="false" text="Reset Week" />
             </items>
           </Menu>
             <Menu mnemonicParsing="false" text="Day">

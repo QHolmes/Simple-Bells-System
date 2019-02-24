@@ -5,167 +5,217 @@
  */
 package dataStructures.templates;
 
-import dataStructures.EventSegment;
-import dataStructures.PlayList;
-import dataStructures.SoundFile;
-import dataStructures.schedules.ScheduledEvent;
+import dataStructures.Types.EventType;
+import dataStructures.schedules.EventScheduled;
 import exceptions.TimeOutOfBounds;
-import java.io.Serializable;
+import helperClasses.Helper;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.concurrent.locks.StampedLock;
 
 /**
  *
  * @author Quinten Holmes
  */
-public class EventTemplate implements Serializable{
-    private static final long serialVersionUID = 1;
+public class EventTemplate extends EventType{
     
-    private int hour;
-    private int minute;
-    private int second;
+    private LocalTime startTime;
     private String eventName;
-    private final ArrayList<EventSegment> segments;
 
-    public EventTemplate(int hour, int minute, int second) {
-        this.hour = hour;
-        this.minute = minute;
-        this.second = second;
+    public EventTemplate(LocalTime startTime) {
+        super();
+        this.startTime = startTime;
         segments = new ArrayList();
+        varLock = new StampedLock();
     }
 
-    public int getHour() {
-        return hour;
+    public int getHour() throws InterruptedException {
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getReadLock(timeLock);
+            return startTime.getHour();
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockRead(stamp);
+        }
     }
 
-    public void setHour(int hour) throws TimeOutOfBounds {
+    public void setHour(int hour) throws TimeOutOfBounds, InterruptedException {
         if(hour > 23 || hour < 0)
             throw new TimeOutOfBounds("Hour needs to be between 0-23");
         
-        this.hour = hour;
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getWriteLock(timeLock);
+            startTime = startTime.minusHours(-hour);
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockWrite(stamp);
+        }
+        
+    }
+    
+    public int getMinute() throws InterruptedException {
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getReadLock(timeLock);
+            return startTime.getMinute();
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockRead(stamp);
+        }
     }
 
-    public int getMinute() {
-        return minute;
-    }
-
-    public void setMinute(int minute) throws TimeOutOfBounds {
+    public void setMinute(int minute) throws TimeOutOfBounds, InterruptedException {
         if(minute > 59 || minute < 0)
             throw new TimeOutOfBounds("Minutes needs to be between 0-59");
         
-        this.minute = minute;
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getWriteLock(timeLock);
+            startTime = startTime.minusMinutes(-minute);
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockWrite(stamp);
+        }
+    }
+    
+    public int getSecond() throws InterruptedException {
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getReadLock(timeLock);
+            return startTime.getSecond();
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockRead(stamp);
+        }
     }
 
-    public int getSecond() {
-        return second;
-    }
-
-    public void setSecond(int second) throws TimeOutOfBounds {        
+    public void setSecond(int second) throws TimeOutOfBounds, InterruptedException {        
          if(second > 59 || second < 0)
             throw new TimeOutOfBounds("Seconds needs to be between 0-59");
         
-        this.second = second;
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getWriteLock(timeLock);
+            startTime = startTime.minusSeconds(-second);
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockWrite(stamp);
+        }
+    }
+    
+    public LocalTime getStartTime() throws InterruptedException{
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getReadLock(timeLock);
+            return startTime;
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockRead(stamp);
+        }
+    }
+    
+    public LocalTime getStopTime() throws InterruptedException{
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getReadLock(timeLock);
+            return startTime.minusSeconds(- ((long) Math.ceil(getDuration())));
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockRead(stamp);
+        }
     }
 
-    public String getEventName() {
-        return eventName;
+    public String getEventName() throws InterruptedException {
+        long stamp = 0;
+        try{
+            stamp = Helper.getReadLock(varLock);
+            return eventName;
+        }finally{
+            if(stamp != 0)
+                varLock.unlockRead(stamp);
+        }
     }
 
-    public void setEventName(String eventName) {
-        this.eventName = eventName;
-    }
-    
-    /**
-     * Returns a shallow copy of all the segments.
-     * @return list of all segments for this event
-     */
-    public ArrayList<EventSegment> getSegments(){
-        ArrayList<EventSegment> segs = new ArrayList();
-        synchronized(segments){segs.addAll(segments);}
-        return segs;
-    }
-    
-    /**
-     * Tries to remove the given segment from the event. Will return false is the
-     * segment could not be removed. 
-     * @param seg
-     * @return 
-     */
-    public boolean removeSegment(EventSegment seg){
-        synchronized(segments){return segments.remove(seg);}
-    }
-    
-    /**
-     * Tries to add the given segment to the list at the given spot.
-     * @param seg
-     * @param order
-     */
-    public void addSegment(EventSegment seg, int order){
-        synchronized(segments){segments.add(order, seg);}
-    }
-    
-    /**
-     * Returns the total length of time, in seconds, the event will take to 
-     * complete.
-     * @return length of time in seconds
-     */
-    public double getEventDuration(){
-        double length = 0;
-        
-        length = segments.stream().map((s) -> s.getDuration())
-                .reduce(length, (accumulator, _item) -> accumulator + _item);
-        
-        return length;
+    public void setEventName(String eventName) throws InterruptedException {
+        long stamp = 0;
+        try{
+            stamp = Helper.getWriteLock(varLock);
+            this.eventName = eventName;
+        }finally{
+            if(stamp != 0)
+                varLock.unlockWrite(stamp);
+        }
     }
     
     /**
      * Creates a ScheduledEvent for today's date at the given time.
      * @param day Day the event should happen
      * @return 
-     * @throws exceptions.StartDateInPast 
      */
-    public ScheduledEvent createScheduledEvent(Date day){
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(day);
-        calendar.set(Calendar.HOUR, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        calendar.set(Calendar.SECOND, second);
-        calendar.add(Calendar.DATE, -1);
+    public EventScheduled getScheduledEvent(LocalDate day) throws InterruptedException{
+        EventScheduled event =  new EventScheduled(startTime.atDate(day));
         
-        Date dayTime = calendar.getTime();
-        
-        ScheduledEvent event =  new ScheduledEvent(dayTime);
-        
-        for(int i = 0; i < segments.size(); i++)
-            event.addSegment(segments.get(i), i);
-        
-        return event;
+        long stamp = 0;
+        try{
+            stamp = Helper.getReadLock(segmentLock);
+            for(int i = 0; i < segments.size(); i++)
+                event.addSegment(segments.get(i), i);
+
+            return event;
+        }finally{
+            if(stamp != 0)
+                segmentLock.unlockRead(stamp);
+        }
     }
     
-    public int compareTo(EventTemplate e){
-        return ((hour * 3600) + (minute * 60) + second) - ((e.getHour() * 3600) + (e.getMinute() * 60) +e.getSecond());
+    public int compareTo(EventType e){
+        if(!(e instanceof EventTemplate))
+            return 0;
+        
+        long stamp = 0;
+        try{
+            stamp = Helper.getReadLock(timeLock);
+            return startTime.compareTo(((EventTemplate)e).getStartTime());
+        } catch (InterruptedException ex) {
+            return 0;
+        }finally{
+            if(stamp != 0)
+                timeLock.unlockRead(stamp);
+        }
     }
     
-    public boolean checkOverlap(EventTemplate e){
-        double start = (hour * 3600) + (minute * 60) + second;
-        double end = start + getEventDuration();
-        double time = (e.getHour() * 3600) + (e.getMinute() * 60) +e.getSecond();
+    @Override
+    public boolean checkOverlap(EventType e) throws InterruptedException{
+        if(!(e instanceof EventTemplate))
+            return false;
         
-        return time >= start && time <= end;            
+        LocalTime endTime = getStopTime();
+        
+        //Ends before start
+        if(((EventTemplate) e).getStopTime().compareTo(startTime) <= 0)
+            return false;
+        
+        //Starts after end
+        if(((EventTemplate) e).getStartTime().compareTo(endTime) >= 0)
+            return false;
+        
+        return true;           
     }
     
     @Override
     public String toString(){
         return eventName;
-    }
-    
-    public void removeFile(SoundFile file){
-        segments.forEach(s -> s.removeFile(file));
-    }
-    
-    public void removePlayList(PlayList list){
-        segments.forEach(s -> s.removePlayList(list));
     }
     
 }

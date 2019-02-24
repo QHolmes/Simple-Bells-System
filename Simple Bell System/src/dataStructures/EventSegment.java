@@ -46,8 +46,8 @@ public class EventSegment implements Serializable{
     }
 
     /**
-     * Gives the length of time the given segment will be played.
-     * @return 
+     * Gives the length of time, in seconds, the given segment is set to be played.
+     * @return time in seconds
      */
     public double getDuration() {
         if(duration > 0.0)
