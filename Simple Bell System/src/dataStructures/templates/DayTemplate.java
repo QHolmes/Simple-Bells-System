@@ -5,12 +5,15 @@
  */
 package dataStructures.templates;
 
+import dataStructures.RegionDataCore;
+import dataStructures.Generator;
 import dataStructures.Types.DayType;
-import dataStructures.Types.EventType;
 import dataStructures.schedules.DayScheduled;
+import dataStructures.schedules.EventScheduled;
+import exceptions.IncorrectVersionException;
+import helperClasses.Helper;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 
 /**
  *
@@ -19,55 +22,107 @@ import java.util.Date;
 public class DayTemplate extends DayType{
     
     
-    public DayTemplate(){
-        super();
+    public DayTemplate(long ID){
+        super(ID);
         events = new ArrayList();
         name = "";
     }
     
-    public DayTemplate(String name){
-        this();
+    public DayTemplate(long ID, String name){
+        this(ID);
         this.name = name;
     }
     
     /**
      * Returns a scheduled day for the given date
+     * @param newDayID
+     * @param gen
      * @param day The day the scheduled event would be used.
+     * @param data
      * @return 
      */
-    public DayScheduled getScheduledDay(LocalDate day) throws InterruptedException{
-        DayScheduled scDay = new DayScheduled(day);
+    public DayScheduled getScheduledDay(long newDayID, Generator gen, LocalDate day, RegionDataCore data) throws InterruptedException{
+        DayScheduled scDay;
         
-        for(EventType e: events){
-            scDay.addEvent(((EventTemplate) e).getScheduledEvent(day));
-        }
+        long stamp = 0;
         
-        scDay.setName(name);
-        
-        return scDay;
+        while(true)
+            try{
+                stamp = Helper.getReadLock(lock);
+                scDay = new DayScheduled(newDayID, day);
+                data.addDayScheduled(scDay);
+                
+                EventTemplate e;
+                for(long id: events){
+                    e = data.getEventTemplate(id);
+                    EventScheduled newEvent = e.getScheduledEvent(gen.getNewEventID(), data, day);
+                    data.addEventScheduled(newEvent);
+                    scDay.addEvent(scDay.getVersion(), newEvent.getID(), data);
+                }
+
+                scDay.setName(scDay.getVersion(), name);
+
+                return scDay;
+            } catch (IncorrectVersionException ex) {}finally{
+                if(stamp != 0)
+                    lock.unlockRead(stamp);
+            }
     }
     
 
     @Override
-    public boolean addEvent(EventType ev) throws InterruptedException{
-        if(!(ev instanceof EventTemplate))
+    public boolean addEvent(int version, long eventID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
+        EventTemplate ev = data.getEventTemplate(eventID);
+        
+        if(ev == null || !(ev instanceof EventTemplate))
             return false;
         
         boolean valid = true;
         
-        for(EventType e: events){
-            valid = !e.checkOverlap(ev);
-            if(valid == false)
-                break;
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            EventTemplate e;
+            for(long id: events){
+                e = data.getEventTemplate(id);
+                if(e == null)
+                    continue;
+                valid = !e.checkOverlap(ev, data);
+                if(valid == false)
+                    break;
+            }
+
+            if(valid){
+                events.add(eventID);
+                sortEvents();
+            }
+            this.version++;
+            return valid;
+        }finally{
+            if(stamp != 0)
+                lock.unlockWrite(stamp);
         }
         
-        if(valid){
-            EventTemplate temp = (EventTemplate) ev;
-            events.add(temp);
-            sortEvents();
+    }
+    
+    public ArrayList<Long> getEvents() throws InterruptedException{
+        ArrayList<Long> ev = new ArrayList();
+        
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getReadLock(lock);
+            events.forEach(e -> {
+                ev.add(e);
+            });
+        }finally{
+            if(stamp != 0)
+                lock.unlockRead(stamp);
         }
         
-        return valid;
+        return ev;
     }
     
 }

@@ -6,7 +6,9 @@
 package gui;
 
 import dataStructures.BellRegion;
+import dataStructures.Generator;
 import dataStructures.PlayList;
+import dataStructures.RegionDataCore;
 import dataStructures.SoundFile;
 import dataStructures.schedules.DayScheduled;
 import dataStructures.schedules.WeekScheduled;
@@ -15,6 +17,7 @@ import helperClasses.MyLogger;
 import helperClasses.Save;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.logging.Level;
@@ -25,61 +28,62 @@ import java.util.logging.Logger;
  * @author Quinten Holmes
  */
 public class GUICore implements Serializable{
-    private static final long serialVersionUID = 5;
+    private static final long serialVersionUID = 7;
     
     protected BellRegion region;
-    private transient HashSet<SoundFile> musicFiles;
-    private transient HashSet<SoundFile> bellSounds;
-    protected transient HashSet<PlayList> playLists;
     protected int currentDayOfWeek;
     protected int currentWeek;
     protected int currentYear;
-    protected SoundFile defaultBell;
+    protected long defaultBell = 0;
+    private Generator gen;
+    private RegionDataCore data;
     private final static Logger LOGGER = Logger.getLogger(Logger.GLOBAL_LOGGER_NAME);
     
     
     public GUICore(){
         Save.setUp();
-        region = new BellRegion();
-        musicFiles = new HashSet();
-        bellSounds = new HashSet();
-        playLists = new HashSet();
-        defaultBell = null;
+        gen = new Generator();
+        region = new BellRegion(gen);
+        defaultBell = 0;
+        
         initialize();
     }
     
     public boolean addMusicFile(SoundFile s){
         if(s != null){
-            LOGGER.log(Level.INFO, "Adding music file [{0}]", s.getFileName());
-             if (!musicFiles.stream().noneMatch((f) -> (f.equals(s)))) {
-                return false;
-            }
-            return musicFiles.add(s);
+            return data.addMusicFile(s);
         }
         
         LOGGER.log(Level.INFO, "null music file was attempted to be added");
         
         return false;
     }
-    
-    public int getMusicFileSize(){
-        return musicFiles.size();
+
+    public RegionDataCore getData() {
+        return data;
     }
     
-    public HashSet<SoundFile> getMusicFiles(){
-        return musicFiles;
+    public int getMusicFileSize(){
+        return data.getBellFiles().size();
+    }
+    
+    public ArrayList<SoundFile> getMusicFiles(){
+        ArrayList<Long> ids = data.getMusicFiles();
+        ArrayList<SoundFile> music = new ArrayList(ids.size());
+        
+        ids.forEach(id -> {
+            SoundFile m = data.getMusicFile(id);
+            if(m != null)
+                music.add(m);
+        });
+        
+        return music;
     }
     
     public boolean addBellSound(SoundFile s){
-        if(s != null){
-            LOGGER.log(Level.INFO, "Adding bell sound [{0}]", s.getFileName());
-            
-            if (!bellSounds.stream().noneMatch((f) -> (f.equals(s)))) {
-                return false;
-            }                
-            
-            return bellSounds.add(s);
-        }
+        if(s != null)
+            return data.addBellFile(s);
+       
         
         LOGGER.log(Level.INFO, "null bell file was attempted to be added");
         
@@ -87,28 +91,32 @@ public class GUICore implements Serializable{
     }
     
     public int getBellSoundsSize(){
-        return bellSounds.size();
+        return data.getBellFiles().size();
     }
     
-    public HashSet<SoundFile> getBellSounds(){
-        return bellSounds;
+    public ArrayList<SoundFile> getBellSounds(){
+        ArrayList<Long> ids = data.getBellFiles();
+        ArrayList<SoundFile> bells = new ArrayList(ids.size());
+        
+        ids.forEach(id -> {
+            SoundFile m = data.getBellFile(id);
+            if(m != null)
+                bells.add(m);
+        });
+        
+        return bells;
     }
     
     public final void initialize(){
-        region.initialize();
+        region.initialize(gen);
         Calendar cal = Calendar.getInstance();
         currentDayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
         currentWeek = cal.get(Calendar.WEEK_OF_YEAR);
         currentYear = cal.get(Calendar.YEAR);
-        musicFiles = (HashSet<SoundFile>) Save.loadObject("Music_Library");
-        if(musicFiles == null)
-            musicFiles = new HashSet();
-        bellSounds = (HashSet<SoundFile>) Save.loadObject("Bells_Library");
-        if(bellSounds == null)
-            bellSounds = new HashSet();
-        playLists = (HashSet<PlayList>) Save.loadObject("Play_Lists");
-        if(playLists == null)
-            playLists = new HashSet();
+        gen = (Generator) Save.loadObject("Generator");
+        if(gen == null)
+            gen = new Generator();
+        data = region.getData();
         setupLogger();
     }
     
@@ -184,9 +192,7 @@ public class GUICore implements Serializable{
         Thread th = new Thread(){
             public void run(){
                 Save.saveObject(core, "GUICore");
-                Save.saveObject(musicFiles, "Music_Library");
-                Save.saveObject(bellSounds, "Bells_Library");
-                Save.saveObject(playLists, "Play_Lists");
+                Save.saveObject(gen, "Generator");
             }
         };
         th.setDaemon(true);
@@ -214,7 +220,7 @@ public class GUICore implements Serializable{
     }
     
     public void removeBellFile(SoundFile f){
-        boolean b = bellSounds.remove(f);
+        boolean b = data.removeBellFile(f.getID());
         
         if(b){
             while(true)
@@ -230,7 +236,7 @@ public class GUICore implements Serializable{
     }
     
     public void removeMusicFile(SoundFile f){
-        boolean b = musicFiles.remove(f);
+        boolean b = data.removeMusicFile(f.getID());
         if(b){
             while(true)
                 try {
@@ -245,7 +251,7 @@ public class GUICore implements Serializable{
     }
     
     public void removePlayList(PlayList list){
-        boolean b = playLists.remove(list);
+        boolean b = data.removePlayList(list.getID());
         if(b){
             while(true)
                 try {
@@ -270,6 +276,10 @@ public class GUICore implements Serializable{
     
     public Logger getLog(){
         return LOGGER;
+    }
+    
+    public Generator getGenerator(){
+        return gen;
     }
     
 }

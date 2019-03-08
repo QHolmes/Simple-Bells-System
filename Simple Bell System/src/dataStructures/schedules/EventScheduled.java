@@ -5,8 +5,10 @@
  */
 package dataStructures.schedules;
 
+import dataStructures.RegionDataCore;
 import dataStructures.Types.EventType;
 import dataStructures.templates.EventTemplate;
+import exceptions.IncorrectVersionException;
 import helperClasses.Helper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ import java.util.concurrent.locks.StampedLock;
 public class EventScheduled extends EventType{
     
     private LocalDateTime startTime;
+    private long parentID;
 
     /**
      * A bell event is a sequence of files to be played.When the start time is reached
@@ -27,83 +30,86 @@ public class EventScheduled extends EventType{
      * play or skip the post bell.No files are required... however that seems silly
      * @param startTime This is when the event should start. Cannot be null or in the past.
      */
-    public EventScheduled(LocalDateTime startTime){
-        super();
+    public EventScheduled(long ID, LocalDateTime startTime){
+        super(ID);
         if(startTime == null)
             throw new NullPointerException("Start time was not specified");
                     
         this.startTime = startTime;
         segments = new ArrayList();
         
-        segmentLock = new StampedLock();
-        varLock = new StampedLock();
+        lock = new StampedLock();
     }
 
     public LocalDateTime getStartTime() throws InterruptedException {
         long stamp = 0;
         
         try{
-            stamp = Helper.getReadLock(timeLock);
+            stamp = Helper.getReadLock(lock);
             return startTime;
         }finally{
             if(stamp != 0)
-                timeLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
     
-    public LocalDateTime getStopTime() throws InterruptedException{
+    public LocalDateTime getStopTime(RegionDataCore data) throws InterruptedException{
         long stamp = 0;
         
         try{
-            stamp = Helper.getReadLock(timeLock);
-            return startTime.minusSeconds(- ((long) Math.ceil(getDuration())));
+            stamp = Helper.getReadLock(lock);
+            return startTime.minusSeconds(- ((long) Math.ceil(getDuration(data))));
         }finally{
             if(stamp != 0)
-                timeLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
     
     public boolean isCancelled() throws InterruptedException{
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(varLock);
+            stamp = Helper.getReadLock(lock);
             
             return cancelled;
         }finally{
             if(stamp != 0)
-                varLock.unlockWrite(stamp);
+                lock.unlockRead(stamp);
         }
     }
     
-    public void cancelEvent(boolean b) throws InterruptedException{
+    public void cancelEvent(int version, boolean b) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(varLock);
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
             cancelled = b;
+            this.version++;
         }finally{
-            varLock.unlockWrite(stamp);
+            lock.unlockWrite(stamp);
         }
     }
 
     public boolean isRunning() throws InterruptedException {
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(varLock);
+            stamp = Helper.getReadLock(lock);
             
             return running;
         }finally{
             if(stamp != 0)
-                varLock.unlockWrite(stamp);
+                lock.unlockRead(stamp);
         }
     }
 
-    public void setRunning(boolean running) throws InterruptedException {
+    public void setRunning(int version, boolean running) throws InterruptedException, IncorrectVersionException {
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(varLock);
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
             this.running = running;
+            this.version++;
         }finally{
-            varLock.unlockWrite(stamp);
+            lock.unlockWrite(stamp);
         }
     }
     
@@ -122,6 +128,7 @@ public class EventScheduled extends EventType{
         return hash;
     }
     
+    @Override
     public int compareTo(EventType o){
         if(!(o instanceof EventScheduled))
             return 0;
@@ -134,11 +141,11 @@ public class EventScheduled extends EventType{
     }
     
     @Override
-    public boolean checkOverlap(EventType e) throws InterruptedException{
-        LocalDateTime endTime = getStopTime();
+    public boolean checkOverlap(EventType e, RegionDataCore data) throws InterruptedException{
+        LocalDateTime endTime = getStopTime(data);
         
         //Ends before start
-        if(((EventScheduled) e).getStopTime().compareTo(startTime) <= 0)
+        if(((EventScheduled) e).getStopTime(data).compareTo(startTime) <= 0)
             return false;
         
         //Starts after end
@@ -148,37 +155,43 @@ public class EventScheduled extends EventType{
         return true;         
     }
     
-    public boolean setStartTime(LocalDateTime date) throws InterruptedException{
+    public boolean setStartTime(int version, LocalDateTime date) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         
         try{
             if(running)
                 return false;
             
-            stamp = Helper.getWriteLock(timeLock);
-            
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
             startTime = date;
+            this.version++;
             return true;
         }finally{
             if(stamp != 0)
-                timeLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
     
-    public EventTemplate getTemplate() throws InterruptedException{
-        EventTemplate ev = new EventTemplate(startTime.toLocalTime());
-        
+    public EventTemplate getTemplate(long newEventID, RegionDataCore data) throws InterruptedException{
+        EventTemplate ev;
         long stamp = 0;
-        try{
-            stamp = Helper.getReadLock(segmentLock);
-            for(int i = 0; i < segments.size(); i++)
-                ev.addSegment(segments.get(i), i);
+        
+        while(true)
+            try {
+                stamp = Helper.getReadLock(lock);
+                ev = new EventTemplate(newEventID, startTime.toLocalTime());
+                data.addEventTemplate(ev);
+                for(int i = 0; i < segments.size(); i++)
+                    ev.addSegment(ev.getVersion(), segments.get(i), i);
 
-            return ev;
-        }finally{
-            if(stamp != 0)
-                segmentLock.unlockRead(stamp);
-        }
+                return ev;
+            } catch (IncorrectVersionException ex) {}finally{
+                if(stamp !=0)
+                    lock.unlockRead(stamp);
+            }
     }
+    
+    
     
 }

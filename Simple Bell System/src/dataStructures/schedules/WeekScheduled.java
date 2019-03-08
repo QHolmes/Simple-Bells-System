@@ -5,10 +5,13 @@
  */
 package dataStructures.schedules;
 
+import dataStructures.RegionDataCore;
+import dataStructures.Generator;
 import dataStructures.PlayList;
 import dataStructures.SoundFile;
 import dataStructures.Types.WeekType;
 import dataStructures.templates.WeekTemplate;
+import exceptions.IncorrectVersionException;
 import helperClasses.Helper;
 import java.time.LocalDate;
 import java.time.temporal.WeekFields;
@@ -22,8 +25,8 @@ public class WeekScheduled extends WeekType{
     
     private final DayScheduled[] days = new DayScheduled[7];
 
-    public WeekScheduled(LocalDate date) {
-        super();
+    public WeekScheduled(long ID, Generator gen, RegionDataCore data, LocalDate date) {
+        super(ID);
         this.date = date;
         
         WeekFields weekFields = WeekFields.of(Locale.getDefault());
@@ -31,40 +34,43 @@ public class WeekScheduled extends WeekType{
         
         
         for(int i = 0; i < 7; i++){
-            days[i] = new DayScheduled(local);
+            days[i] = new DayScheduled(gen.getNewDayID(), local);
+            data.addDayScheduled(days[i]);
             local = local.minusDays(-1);
         }
         check();
     }
     
-    public WeekScheduled(String weekName, LocalDate date){
-        this(date);
+    public WeekScheduled(long ID, Generator gen, RegionDataCore data, String weekName, LocalDate date){
+        this(ID, gen, data, date);
         this.name = weekName;
     }
     
     public DayScheduled[] getDays() throws InterruptedException{
         long stamp = 0;
         try{
-            stamp = Helper.getReadLock(dayLock);
+            stamp = Helper.getReadLock(lock);
             DayScheduled[] array = new DayScheduled[7];
             System.arraycopy(days, 0, array, 0, 7);
             return array;
         }finally{
             if(stamp != 0)
-                dayLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
     
-    public void setDay(DayScheduled day) throws InterruptedException{
+    public void setDay(int version, DayScheduled day) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         
         try{
-            stamp = Helper.getWriteLock(dayLock);
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
             int index = day.getDay().get(WeekFields.of(Locale.getDefault()).dayOfWeek()) - 1;
             days[index] = day;
+            this.version++;
         }finally{
             if(stamp != 0)
-                dayLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
     
@@ -72,11 +78,11 @@ public class WeekScheduled extends WeekType{
         long stamp = 0;
         if(i >= 1 && i <= 7){
             try{
-                stamp = Helper.getReadLock(dayLock);
+                stamp = Helper.getReadLock(lock);
                 return days[i - 1];
             }finally{
                 if(stamp != 0)
-                    dayLock.unlockRead(stamp);
+                    lock.unlockRead(stamp);
             }
         }
         
@@ -86,52 +92,75 @@ public class WeekScheduled extends WeekType{
     public LocalDate getDate() throws InterruptedException{
         long stamp = 0;
         try{
-            stamp = Helper.getReadLock(timeLock);
+            stamp = Helper.getReadLock(lock);
             return date;
         }finally{
             if(stamp != 0)
-                timeLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
     
-    public WeekTemplate getTemplate() throws InterruptedException{
-        WeekTemplate wTemp = new WeekTemplate();
+    public WeekTemplate getTemplate(long newWeekID, RegionDataCore data, Generator gen) throws InterruptedException{
+        WeekTemplate wTemp = new WeekTemplate(newWeekID);
+        data.addWeekTemplate(wTemp);
         
         long stamp = 0;
         try{
-            stamp = Helper.getReadLock(dayLock);
-            for(int i = 0; i < 7; i++)
-                wTemp.setDay(days[i].createTemplate(), i + 1);
+            stamp = Helper.getReadLock(lock);
+            for(int i = 0; i < 7; i++){
+                while(true)
+               try{
+                    wTemp.setDay(wTemp.getVersion(), days[i].getTemplate(gen.getNewDayID(), data, gen), i + 1); 
+                    break;
+               }catch (IncorrectVersionException ex) {}
+            }
+                
         }finally{
             if(stamp != 0)
-                dayLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
         
         return wTemp;
     }
     
-    public void removeFile(SoundFile file) throws InterruptedException{
+    public void removeFile(int version, long fileID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(dayLock);
-            for(int i = 0; i < 7; i++)
-                days[i].removeFile(file);  
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            for(int i = 0; i < 7; i++){
+                while(true)
+                    try{
+                        days[i].removeFile(days[i].getVersion(), fileID, data);
+                        break;
+                    }catch (IncorrectVersionException ex) {}
+            }  
+            this.version++;
         }finally{
             if(stamp != 0)
-                dayLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }  
     }
     
-    public void removePlayList(PlayList list) throws InterruptedException{
+    public void removePlayList(int version, long listID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(dayLock);
-            for(int i = 0; i < 0; i++)
-                days[i].removePlayList(list); 
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            boolean b;
+            for(int i = 0; i < 7; i++){
+                b= false;
+                while(!b)
+                    try{
+                        days[i].removePlayList(days[i].getVersion(), listID, data); 
+                        b = true;
+                    }catch (IncorrectVersionException ex) {}
+            }  
+            this.version++;
         }finally{
             if(stamp != 0)
-                dayLock.unlockWrite(stamp);
-        }  
+                lock.unlockWrite(stamp);
+        } 
     }
     
 }

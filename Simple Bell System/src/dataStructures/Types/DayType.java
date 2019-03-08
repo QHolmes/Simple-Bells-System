@@ -5,69 +5,90 @@
  */
 package dataStructures.Types;
 
+import dataStructures.RegionDataCore;
 import dataStructures.PlayList;
-import dataStructures.SoundFile;
 import dataStructures.templates.EventTemplate;
+import exceptions.IncorrectVersionException;
 import helperClasses.Helper;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.concurrent.locks.StampedLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
  * @author Quinten Holmes
  */
 public abstract class DayType implements Serializable{
-    protected static final long serialVersionUID = 1;
+    protected static final long serialVersionUID = 3;
     
-    protected ArrayList<EventType> events;
+    protected ArrayList<Long> events;
     protected String name;
+    protected int version = 0;
+    protected StampedLock lock;
+    protected final long ID;
     
-    protected StampedLock eventLock;
-    protected StampedLock varLock;
-    protected StampedLock timeLock;
-    
-    public DayType(){
+    public DayType(long ID){
+        this.ID = ID;
         check();
     }
     
     final public void check(){
-        if(varLock == null)
-            varLock= new StampedLock();
-        
-        if(timeLock == null)
-            timeLock = new StampedLock();
-        
-        if(eventLock == null)
-            eventLock = new StampedLock();
+        if(lock == null)
+            lock = new StampedLock();
     }
     
-    abstract public boolean addEvent(EventType ev) throws InterruptedException;
+    /**
+     * Adds the event ID to the day.
+     * @param version last known version of the day
+     * @param eventID ID of event to add
+     * @return true if added, else false
+     * @throws InterruptedException
+     * @throws IncorrectVersionException 
+     */
+    abstract public boolean addEvent(int version, long eventID, RegionDataCore data) throws InterruptedException, IncorrectVersionException;
     
-    public void removeFile(SoundFile file) throws InterruptedException{
+    public void removeFile(int version, long fileID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         
         try{
-            stamp = Helper.getWriteLock(eventLock);
-            events.forEach(s -> s.removeFile(file));
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            events.forEach(id -> {
+                while(true)
+                    try {
+                        EventType e = data.getEventScheduled(id);
+                        if(e != null)
+                            e.removeFile(e.getVersion(), fileID, data);
+                        return;
+                    } catch (InterruptedException | IncorrectVersionException ex) {} 
+            });
+            this.version++;
         }finally{
             if(stamp != 0)
-                eventLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
     
-    public void removePlayList(PlayList list) throws InterruptedException{
+    public void removePlayList(int version, long listID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         
         try{
-            stamp = Helper.getWriteLock(eventLock);
-            events.forEach(s -> s.removePlayList(list));
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            events.forEach(id -> {
+                while(true)
+                    try {
+                        EventType e = data.getEventScheduled(id);
+                        if(e != null)
+                            e.removePlayList(e.getVersion(), listID, data);
+                        return;
+                    } catch (InterruptedException | IncorrectVersionException ex) {}
+            });
+            this.version++;
         }finally{
             if(stamp != 0)
-                eventLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
         
@@ -75,11 +96,11 @@ public abstract class DayType implements Serializable{
         long stamp = 0;
         
         try{
-            stamp = Helper.getWriteLock(eventLock);
+            stamp = Helper.getWriteLock(lock);
             events.sort(new eventComparator());
         }finally{
             if(stamp != 0)
-                eventLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
        
@@ -96,22 +117,24 @@ public abstract class DayType implements Serializable{
     public String getName() throws InterruptedException {
         long stamp = 0;
         try{
-           stamp = Helper.getReadLock(varLock);
+           stamp = Helper.getReadLock(lock);
            return name; 
         }finally{
             if(stamp !=0)
-                varLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
 
-    public void setName(String name) throws InterruptedException {
+    public void setName(int version, String name) throws InterruptedException, IncorrectVersionException {
         long stamp = 0;
         try{
-           stamp = Helper.getWriteLock(varLock);
-            this.name = name;
+           stamp = Helper.getWriteLock(lock);
+           checkVersion(version);
+           this.name = name;
+           this.version++;
         }finally{
             if(stamp !=0)
-                varLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
     
@@ -127,6 +150,54 @@ public abstract class DayType implements Serializable{
         
         return "Error fetching name";
     }
+    
+    public int getVersion() throws InterruptedException {
+        long stamp = 0;
+        try{
+            stamp = Helper.getReadLock(lock);
+            return version;
+        }finally{
+            if(stamp != 0)
+                lock.unlockRead(stamp);
+        }
+    }
+    
+    protected void checkVersion(int version) throws IncorrectVersionException{
+        if(version != this.version)
+                throw new IncorrectVersionException(String.format("The given version %d does not match the current version %d.%n", 
+                        version, this.version));
+    }
+    
+    public long getID(){
+        return ID;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 83 * hash + (int) (this.ID ^ (this.ID >>> 32));
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final DayType other = (DayType) obj;
+        if (this.ID != other.ID) {
+            return false;
+        }
+        return true;
+    }
+    
+    
     
 
 }

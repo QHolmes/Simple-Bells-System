@@ -6,13 +6,14 @@
 package audioSystem;
 
 import dataStructures.EventSegment;
+import dataStructures.RegionDataCore;
 import dataStructures.SegmentType;
 import dataStructures.schedules.EventScheduled;
 import dataStructures.SoundFile;
+import exceptions.IncorrectVersionException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import javafx.scene.media.Media;
@@ -32,15 +33,17 @@ public class AudioPlayer {
     private boolean playingTrack = false;
     private final Timer timer;
     private TimerTask lastTask;
+    private RegionDataCore data;
     
-    public static AudioPlayer getPlayer(){
+    public static AudioPlayer getPlayer(RegionDataCore data){
         if(player == null)
-            player = new AudioPlayer();
+            player = new AudioPlayer(data);
         
         return player;
     }
     
-    private AudioPlayer(){
+    private AudioPlayer(RegionDataCore data){
+        this.data = data;
        playingTrack = false;
        timer = new Timer();
     }
@@ -115,25 +118,29 @@ public class AudioPlayer {
         TimerTask th = new TimerTask(){
             @Override
             public void run() {
-                long stamp = 0;
                 
+                boolean b = false;
                 if(event == null)
                     return;
                 
-                EventScheduled playinegEvent = event;
+                EventScheduled playingEvent = event;
                 
                 try {
-                    stamp = event.readLockSegments();
                     SoundFile file;
                     synchronized(this){
                         if(event.isCancelled())
                             return;
                         
-                        event.setRunning(true);
-                        ArrayList<EventSegment> segments = event.getSegments();
+                        while(!b)
+                            try{
+                                event.setRunning(event.getVersion(), true);
+                                b = true;
+                            }catch(IncorrectVersionException ex){}
                         
+                        ArrayList<Long> segments = event.getSegments();
+                        EventSegment s;
                         LocalDateTime start = event.getStartTime();
-                        LocalDateTime end = event.getStopTime();
+                        LocalDateTime end = event.getStopTime(data);
                         LocalDateTime now  = LocalDateTime.now();
                         long diff = (start.until(now, ChronoUnit.MILLIS)) / 1000;
                         
@@ -142,7 +149,8 @@ public class AudioPlayer {
                         double length;
                         do{
                             index++;
-                            length = segments.get(index).getDuration();
+                            s = data.getSegment(segments.get(index));
+                            length = s.getDuration(data);
                             duration = length- diff;
                             diff -= length;
                         }while(diff > 0.0001 && index + 1< segments.size());
@@ -154,44 +162,58 @@ public class AudioPlayer {
                         if(index < 0)
                             index = 0;
                         
-                        EventSegment s;
                         for(int i = index; i < segments.size() && event != null && !event.isCancelled(); i++){
-                            s = segments.get(i);
-                            s.setRunning(true);
-                            file = s.getFile();
+                            s = data.getSegment(segments.get(i));
+                            
+                            b = false;
+                            while(!b)
+                                try{
+                                    s.setRunning(s.getVersion(), true);
+                                    b = true;
+                                }catch(InterruptedException | IncorrectVersionException ex){}
+                            
+                            file = s.getFile(data);
                             if(s.getType() == SegmentType.SOUND || s.getType() == SegmentType.BELL && file != null){
                                 System.out.printf("[%d] Playing %s for %.0f seconds.%n", i, file.getFileName(), duration);
                                 play(file, duration);
                                 Thread.sleep((long) Math.ceil(duration) * 1000);
                                 stop();
-                            }else if (s.getType() == SegmentType.PLAYLIST && file != null && s.getPlayList() != null){
+                            }else if (s.getType() == SegmentType.PLAYLIST && file != null && s.getPlayListID() != 0){
                                 System.out.printf("[%d] Playing %s for %.0f seconds. From playlist %s.%n", 
-                                        i, file.getFileName(), duration, s.getPlayList().toString());
+                                        i, file.getFileName(), duration, data.getPlayList(s.getPlayListID()).toString());
                                 play(file, duration);
                                 Thread.sleep((long) Math.ceil(duration) * 1000);
                                 stop();
                             }else{
-                                if(s.getType() != SegmentType.SILENCE && s.getFile() != null)
+                                if(s.getType() != SegmentType.SILENCE && s.getFile(data) != null)
                                     System.out.printf("[%d] Sound file is null, sleeping instead.%n", i, duration);
                                 System.out.printf("[%d] Sleeping for %.0f seconds. %n", i, duration);
                                 if(duration > 0)
                                     Thread.sleep((long) Math.ceil(duration) * 1000);
                             }
-                            s.setRunning(false);
+                            
+                            b = false;
+                            while(!b)
+                                try{
+                                    s.setRunning(s.getVersion(), false);
+                                    b = true;
+                                }catch(InterruptedException | IncorrectVersionException ex){}
                             
                             if(i + 1 < segments.size())
-                                duration = segments.get(i + 1).getDuration();
+                                duration = data.getSegment(segments.get(i + 1)).getDuration(data);
                         }
                         
-                        playinegEvent.setRunning(false);
+                        b = false;
+                        while(!b)
+                            try{
+                                playingEvent.setRunning(playingEvent.getVersion(), false);
+                                b = true;
+                            }catch(IncorrectVersionException ex){}
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
                 finally {
-                    if(stamp != 0 && playinegEvent != null)
-                        playinegEvent.unlockReadLockSegments(stamp);
-                    
                     event = null;
                     lastTask = null;
                 }

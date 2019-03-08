@@ -28,8 +28,10 @@ public class PlayList implements Serializable{
     private final StampedLock queueLock;
     private final StampedLock hashLock;
     private final StampedLock nameLock;
+    private final long playlistID;
 
-    public PlayList(String playListName) {
+    public PlayList(long playlistID, String playListName) {
+        this.playlistID = playlistID;
         this.playListName = playListName;
         playFiles = new HashSet();
         lastPlayed = new LinkedList<>(); 
@@ -208,6 +210,9 @@ public class PlayList implements Serializable{
         return soundFiles.isEmpty();
     }
     
+    public long getID(){
+        return playlistID;
+    }
     
     
 }

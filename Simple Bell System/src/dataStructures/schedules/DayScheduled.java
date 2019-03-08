@@ -5,9 +5,12 @@
  */
 package dataStructures.schedules;
 
+import dataStructures.RegionDataCore;
+import dataStructures.Generator;
 import dataStructures.Types.DayType;
-import dataStructures.Types.EventType;
 import dataStructures.templates.DayTemplate;
+import dataStructures.templates.EventTemplate;
+import exceptions.IncorrectVersionException;
 import helperClasses.Helper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,58 +24,85 @@ public class DayScheduled extends DayType{
     
     private final LocalDate day;
     
-    public DayScheduled(LocalDate day){
-        super();
+    public DayScheduled(long ID, LocalDate day){
+        super(ID);
         events = new ArrayList();
         this.day = day;
     }
     
-    public ArrayList<EventScheduled> getEvents() throws InterruptedException{
-        ArrayList<EventScheduled> ev = new ArrayList();
+    @Override
+    public void removeFile(int version, long fileID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
+        long stamp = 0;
+        
+        try{
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            events.forEach(id -> {
+                while(true)
+                    try {
+                        EventScheduled e = data.getEventScheduled(id);
+                        if(e != null)
+                        e.removeFile(e.getVersion(), fileID, data);
+                        return;
+                    } catch (InterruptedException | IncorrectVersionException ex) {} 
+            });
+            this.version++;
+        }finally{
+            if(stamp != 0)
+                lock.unlockWrite(stamp);
+        }
+    }
+    
+    public ArrayList<Long> getEvents() throws InterruptedException{
+        ArrayList<Long> ev = new ArrayList();
         
         long stamp = 0;
         
         try{
-            stamp = Helper.getReadLock(eventLock);
+            stamp = Helper.getReadLock(lock);
             events.forEach(e -> {
-                ev.add((EventScheduled) e);
+                ev.add(e);
             });
         }finally{
             if(stamp != 0)
-                eventLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
         
         return ev;
     }
     
     @Override
-    public boolean addEvent(EventType ev) throws InterruptedException{
-        if(ev == null)
-            return false;
+    public boolean addEvent(int version, long eventID, RegionDataCore data) throws InterruptedException, IncorrectVersionException{
+        
+        EventScheduled ev = data.getEventScheduled(eventID);
         
         if(!(ev instanceof EventScheduled))
             return false;
         
         long stamp = 0;
         try{
-            stamp = Helper.getWriteLock(eventLock);
-            return events.add((EventScheduled) ev);
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            this.version++;
+            return events.add(eventID);
         }finally{
             if(stamp != 0)
-                eventLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
         
     }
     
-    public void removeEvent(EventScheduled ev) throws InterruptedException{
+    public void removeEvent(int version, EventScheduled ev) throws InterruptedException, IncorrectVersionException{
         long stamp = 0;
         
         try{
-            stamp = Helper.getWriteLock(eventLock);
-            events.remove(ev);
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
+            events.remove(ev.getID());
+            this.version++;
         }finally{
             if(stamp != 0)
-                eventLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
 
@@ -80,11 +110,11 @@ public class DayScheduled extends DayType{
         long stamp = 0;
         
         try{
-            stamp = Helper.getReadLock(timeLock);
+            stamp = Helper.getReadLock(lock);
             return day;
         }finally{
             if(stamp != 0)
-                timeLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
 
@@ -92,68 +122,85 @@ public class DayScheduled extends DayType{
         long stamp = 0;
         
         try{
-            stamp = Helper.getReadLock(varLock);
+            stamp = Helper.getReadLock(lock);
             return name;
         }finally{
             if(stamp != 0)
-                varLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
     }
 
-    public void setName(String name) throws InterruptedException {
+    public void setName(int version, String name) throws InterruptedException, IncorrectVersionException {
         long stamp = 0;
         
         try{
-            stamp = Helper.getWriteLock(varLock);
+            stamp = Helper.getWriteLock(lock);
+            checkVersion(version);
             this.name = name;
+            this.version++;
         }finally{
             if(stamp != 0)
-                varLock.unlockWrite(stamp);
+                lock.unlockWrite(stamp);
         }
     }
     
     /**
      * Returns the next event that should be played.If there is no more events to 
      * play it will return a null value.
+     * @param data
      * @return 
      * @throws java.lang.InterruptedException 
      */
-    public EventScheduled getNextEvent() throws InterruptedException{
-        EventScheduled event = null;
+    public long getNextEvent(RegionDataCore data) throws InterruptedException{
+        long event = -1;
         LocalDateTime now = LocalDateTime.now();
         
         long stamp = 0;
         
         try{
-            stamp = Helper.getReadLock(eventLock);
+            stamp = Helper.getReadLock(lock);
+            EventScheduled ev;
             for(int i = 0; i < events.size(); i++){
-                if(!((EventScheduled) events.get(i)).isCancelled() && ((EventScheduled) events.get(i)).getStopTime().compareTo(now) > 0){
-                    event = ((EventScheduled) events.get(i));
+                ev = data.getEventScheduled(events.get(i));
+                if(ev == null){
+                    events.remove(i);
+                    continue;
+                }
+                
+                if(!ev.isCancelled() && ev.getStopTime(data).compareTo(now) > 0){
+                    event = events.get(i);
                     break;
                 }
             }
         }finally{
             if (stamp != 0)
-                eventLock.unlockRead(stamp);
+                lock.unlockRead(stamp);
         }
         
         return event;
     }
     
-    public DayTemplate createTemplate() throws InterruptedException{
-        DayTemplate dayTemp = new DayTemplate();
+    public DayTemplate getTemplate(long newDayID, RegionDataCore data, Generator gen) throws InterruptedException{
+        DayTemplate dayTemp = new DayTemplate(newDayID);
         
         long stamp = 0;
-        try{
-            stamp = Helper.getReadLock(eventLock);
-            for(EventType e: events)
-                dayTemp.addEvent(((EventScheduled) e).getTemplate());
-        }finally{
-            if(stamp != 0)
-                eventLock.unlockRead(stamp);
-        }
-        
-        return dayTemp;
+        while(true)
+            try{
+                stamp = Helper.getReadLock(lock);
+                for(long e: events){
+                    EventScheduled ev = data.getEventScheduled(e);
+                    EventTemplate template = ev.getTemplate(gen.getNewEventID(), data);
+                    data.addEventTemplate(template);
+                    
+                    dayTemp.addEvent(dayTemp.getVersion(), 
+                            template.getID(), data);
+                }
+                
+                return dayTemp;
+            } catch (IncorrectVersionException ex) {}finally{
+                if(stamp != 0)
+                    lock.unlockRead(stamp);
+            }
     }
     
 }
