@@ -30,10 +30,10 @@ New events can be created on the main screen. On the right-hand side of the scre
 
 In the event pane you can edit, add, or remove event segments. Event segments make up what happens during the event itself. An event segment can be:
 
-..* **Silence**:   No sound is played for the period of time
-..* **Music**:     The selected music file will play for the given time, if you enter “0” the full play time will be filled in.
-..* **Play List**: A randomly selected song will play from the contents of the playlist, for the given amount of time.
-..* **Bell**:      The selected bell sound will play for the given time, if you enter “0” the full play time will be filled in.
++ **Silence**:   No sound is played for the period of time
++ **Music**:     The selected music file will play for the given time, if you enter “0” the full play time will be filled in.
++ **Play List**: A randomly selected song will play from the contents of the playlist, for the given amount of time.
++ **Bell**:      The selected bell sound will play for the given time, if you enter “0” the full play time will be filled in.
 
 __Please note, if a time is entered that is longer then the play time, there will be silence until the next event segment or the end of the event__
 
